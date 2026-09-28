@@ -13,8 +13,8 @@
     "db:reset": "prisma migrate reset --force",
     "db:studio": "prisma studio",
     "setup": "prisma migrate deploy && prisma db seed",
-    "turso:migrate": "tsx scripts/turso-migrate.ts",
-    "create-admin": "tsx scripts/create-admin.ts"
+    "turso:migrate": "tsx --env-file-if-exists=.env scripts/turso-migrate.ts",
+    "create-admin": "tsx --env-file-if-exists=.env scripts/create-admin.ts"
   },
   "dependencies": {
     "@libsql/client": "^0.18.0",

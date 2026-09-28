@@ -55,11 +55,12 @@ Without `RESEND_API_KEY`, emails are printed in the terminal, including their li
    turso db show palapa --url                 # -> TURSO_DATABASE_URL
    turso db tokens create palapa              # -> TURSO_AUTH_TOKEN
    ```
-   Create the tables and your admin account (run from this repo):
+   Put both values in your `.env` (`TURSO_DATABASE_URL="libsql://…"`, `TURSO_AUTH_TOKEN="…"`), then create the tables and your admin account:
    ```bash
-   TURSO_DATABASE_URL=libsql://… TURSO_AUTH_TOKEN=… npm run turso:migrate
-   TURSO_DATABASE_URL=libsql://… TURSO_AUTH_TOKEN=… npm run create-admin -- tu@correo.com "Tu Nombre" "UnaContraseñaSegura"
+   npm run turso:migrate
+   npm run create-admin -- tu@correo.com "Tu Nombre" "UnaContraseñaSegura"
    ```
+   While those two lines are in `.env`, `npm run dev` also uses Turso. Empty them again to go back to the local file.
    Run `turso:migrate` again whenever a new folder appears in `prisma/migrations`.
 
 2. **Resend** (email, 3,000/month free)

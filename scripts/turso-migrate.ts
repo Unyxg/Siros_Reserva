@@ -2,7 +2,7 @@
  * Applies Prisma's SQL migrations to the Turso database.
  * (`prisma migrate deploy` can't talk to Turso directly.)
  *
- *   TURSO_DATABASE_URL=libsql://… TURSO_AUTH_TOKEN=… npm run turso:migrate
+ *   npm run turso:migrate   (reads TURSO_DATABASE_URL / TURSO_AUTH_TOKEN from .env or the shell)
  */
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -10,7 +10,7 @@ import { createClient } from "@libsql/client";
 
 const url = process.env.TURSO_DATABASE_URL;
 if (!url) {
-  console.error("Falta TURSO_DATABASE_URL");
+  console.error("Falta TURSO_DATABASE_URL. Agrégala a tu archivo .env (junto con TURSO_AUTH_TOKEN) o pásala en el comando.");
   process.exit(1);
 }
 
