@@ -2,8 +2,8 @@
 
 import { useState, useTransition } from "react";
 import type { Role } from "@prisma/client";
-import { Check, KeyRound, Loader2, LockKeyhole, MessageCircle, Power, X } from "lucide-react";
-import { approveAccount, changeRole, createPasswordResetLink, rejectAccount, setAccountActive, updateContactWhatsapp, updateInviteCode } from "@/app/actions/admin";
+import { Check, KeyRound, Loader2, LockKeyhole, MessageCircle, Power, Send, X } from "lucide-react";
+import { approveAccount, changeRole, createPasswordResetLink, rejectAccount, setAccountActive, testWhatsappCloud, updateContactWhatsapp, updateInviteCode } from "@/app/actions/admin";
 import { showResult } from "@/components/resultToast";
 import type { ActionResult } from "@/app/actions/auth";
 
@@ -132,5 +132,14 @@ export function ContactWhatsappForm({ phone }: { phone: string }) {
         {pending && <Loader2 className="h-5 w-5 animate-spin" aria-hidden />} Guardar
       </button>
     </form>
+  );
+}
+
+export function TestWhatsappButton() {
+  const { pending, run } = useAction();
+  return (
+    <button disabled={pending} onClick={() => run(testWhatsappCloud)} className="btn-secondary min-h-11 px-4 py-2 text-base">
+      {pending ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : <Send className="h-5 w-5" aria-hidden />} Enviar mensaje de prueba
+    </button>
   );
 }

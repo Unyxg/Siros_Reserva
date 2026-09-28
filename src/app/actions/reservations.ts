@@ -8,6 +8,8 @@ import { addDaysISO, timesOverlap, todayISO } from "@/lib/format";
 import { MAX_DAYS_AHEAD, MAX_GUESTS, TIME_OPTIONS } from "@/lib/constants";
 import { getCommitteeWhatsapp } from "@/lib/settings";
 import { newRequestMessage, reservationWhatsappMessage, residentCancelledMessage, whatsappLink } from "@/lib/whatsapp";
+import { notifyCancelledByStaff, notifyNewRequest, notifyReviewed, notifySlotFreed } from "@/lib/notify";
+import { deliver } from "@/lib/deliver";
 import type { ActionResult } from "@/app/actions/auth";
 
 function revalidateDashboards() {
@@ -56,11 +58,15 @@ export async function createReservation(input: z.input<typeof createSchema>): Pr
 
   const reservation = await prisma.reservation.create({ data: { userId: user.id, date, startTime, endTime, guests, reason } });
 
+  const d = await deliver(
+    () => notifyNewRequest(reservation, user),
+    async () => whatsappLink(await getCommitteeWhatsapp(), newRequestMessage(user, reservation)),
+  );
   revalidateDashboards();
   return {
     ok: true,
-    message: "¡Solicitud enviada! Verás la respuesta aquí mismo.",
-    whatsapp: whatsappLink(await getCommitteeWhatsapp(), newRequestMessage(user, reservation)),
+    message: d.sent ? "¡Solicitud enviada! Ya avisamos al comité por WhatsApp." : "¡Solicitud enviada! Verás la respuesta aquí mismo.",
+    whatsapp: d.whatsapp,
   };
 }
 
@@ -85,16 +91,24 @@ export async function cancelReservation(id: string, reason?: string): Promise<Ac
     data: { status: "CANCELLED", cancelReason: trimmed, cancelledAt: new Date() },
   });
 
+  // Staff tell the neighbor; a neighbor who frees an approved slot tells the committee
+  const d = byStaff
+    ? await deliver(
+        () => notifyCancelledByStaff(updated, reservation.user),
+        () => whatsappLink(reservation.user.phone, reservationWhatsappMessage(reservation.user.name, updated)),
+      )
+    : reservation.status === "APPROVED"
+      ? await deliver(
+          () => notifySlotFreed(updated, reservation.user),
+          async () => whatsappLink(await getCommitteeWhatsapp(), residentCancelledMessage(reservation.user, updated)),
+        )
+      : { sent: false, whatsapp: null };
+
   revalidateDashboards();
   return {
     ok: true,
-    message: "Reservación cancelada. El horario quedó libre.",
-    // Staff tell the neighbor; a neighbor tells the committee
-    whatsapp: byStaff
-      ? whatsappLink(reservation.user.phone, reservationWhatsappMessage(reservation.user.name, updated))
-      : reservation.status === "APPROVED"
-        ? whatsappLink(await getCommitteeWhatsapp(), residentCancelledMessage(reservation.user, updated))
-        : null,
+    message: `Reservación cancelada. El horario quedó libre.${d.sent ? (byStaff ? " Se le avisó al vecino por WhatsApp." : " Avisamos al comité por WhatsApp.") : ""}`,
+    whatsapp: d.whatsapp,
   };
 }
 
@@ -122,10 +136,14 @@ export async function reviewReservation(id: string, decision: "APPROVED" | "REJE
     data: { status: decision, reviewNote: trimmed, reviewedById: user.id, reviewedAt: new Date() },
   });
 
+  const d = await deliver(
+    () => notifyReviewed(updated, reservation.user),
+    () => whatsappLink(reservation.user.phone, reservationWhatsappMessage(reservation.user.name, updated)),
+  );
   revalidateDashboards();
   return {
     ok: true,
-    message: decision === "APPROVED" ? "Solicitud aprobada" : "Solicitud rechazada",
-    whatsapp: whatsappLink(reservation.user.phone, reservationWhatsappMessage(reservation.user.name, updated)),
+    message: `${decision === "APPROVED" ? "Solicitud aprobada" : "Solicitud rechazada"}${d.sent ? ". Se le avisó al vecino por WhatsApp." : ""}`,
+    whatsapp: d.whatsapp,
   };
 }

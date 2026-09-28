@@ -9,7 +9,8 @@ import { appUrl } from "@/lib/app-url";
 import { whatsappLink, whatsappShareLink } from "@/lib/whatsapp";
 import { formatDateTime } from "@/lib/format";
 import { ROLE_LABEL } from "@/lib/constants";
-import { ActiveToggle, ContactWhatsappForm, InviteCodeForm, PendingAccountActions, ResetPasswordButton, RoleSelect } from "./UserControls";
+import { ActiveToggle, ContactWhatsappForm, InviteCodeForm, PendingAccountActions, ResetPasswordButton, RoleSelect, TestWhatsappButton } from "./UserControls";
+import { cloudEnabled } from "@/lib/whatsapp-cloud";
 
 export const metadata: Metadata = { title: "Vecinos" };
 
@@ -41,6 +42,20 @@ export default async function UsersPage() {
           <ContactWhatsappForm phone={contact ?? ""} />
           {!contact && <p className="mt-3 rounded-2xl bg-amber-50 px-4 py-2.5 text-base font-semibold text-amber-900">⚠️ Agrega un número para que los vecinos puedan contactarte.</p>}
         </div>
+      </section>
+
+      <section className={`card mt-5 flex flex-wrap items-center gap-4 p-5 sm:p-6 ${cloudEnabled() ? "border-l-8 border-l-[#25D366]" : "border-l-8 border-l-stone-300"}`}>
+        <div className="min-w-60 flex-1">
+          <p className="text-lg font-extrabold text-stone-900">
+            WhatsApp automático: {cloudEnabled() ? <span className="text-emerald-700">activado ✅</span> : <span className="text-stone-500">no configurado</span>}
+          </p>
+          <p className="text-base text-stone-600">
+            {cloudEnabled()
+              ? "Los avisos se envían solos por la API de WhatsApp de Meta. Si un envío falla, aparece el botón verde para mandarlo a mano."
+              : "Los avisos se mandan con el botón verde (gratis). Para enviarlos solos, agrega las claves de Meta en Vercel."}
+          </p>
+        </div>
+        {cloudEnabled() && <TestWhatsappButton />}
       </section>
 
       <section className="mt-10">

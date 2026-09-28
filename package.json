@@ -14,7 +14,8 @@
     "db:studio": "prisma studio",
     "setup": "prisma migrate deploy && prisma db seed",
     "turso:migrate": "tsx --env-file-if-exists=.env scripts/turso-migrate.ts",
-    "create-admin": "tsx --env-file-if-exists=.env scripts/create-admin.ts"
+    "create-admin": "tsx --env-file-if-exists=.env scripts/create-admin.ts",
+    "whatsapp:templates": "tsx --env-file-if-exists=.env scripts/whatsapp-templates.ts"
   },
   "dependencies": {
     "@libsql/client": "^0.18.0",

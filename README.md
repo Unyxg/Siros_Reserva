@@ -67,7 +67,37 @@ In **GitHub Codespaces** the `.devcontainer` does all of this automatically.
    - Environment variables (only three): `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`, `NEXTAUTH_SECRET`.
    - Deploy. Your address is shown on the project's **Overview** under *Domains*.
 
-3. **First steps in the app**: log in with your admin, go to **Vecinos**, save the administration's WhatsApp number, change the invite code and share it with *Compartir invitación*.
+3. **WhatsApp Cloud API (optional, automatic messages)** – see the next section.
+
+4. **First steps in the app**: log in with your admin, go to **Vecinos**, save the administration's WhatsApp number, change the invite code and share it with *Compartir invitación*.
+
+## Automatic WhatsApp (Meta Cloud API)
+
+Without these settings the app uses free "tap to send" WhatsApp buttons. With them, notices are sent automatically; if one fails, the manual button appears as a fallback.
+
+| Notice | Template | Sent to |
+|---|---|---|
+| New request | `palapa_solicitud_nueva` | all approvers + admins with a phone |
+| Approved / rejected | `palapa_reserva_aprobada` / `palapa_reserva_rechazada` | the neighbor |
+| Cancelled by staff | `palapa_reserva_cancelada` | the neighbor |
+| Neighbor frees an approved slot | `palapa_horario_liberado` | approvers + admins |
+| New account | `palapa_cuenta_nueva` | admins + the administration's contact number |
+| Account approved | `palapa_cuenta_aprobada` | the neighbor |
+| Forgot password (self-service) | `palapa_nueva_contrasena` | the account's phone (button with a 24-h link) |
+
+Setup:
+1. **developers.facebook.com** → *My Apps → Create app* → type **Business** → add the **WhatsApp** product. Meta creates a WhatsApp Business Account and a free **test number**.
+2. **Get the IDs** in *WhatsApp → API Setup*: `Phone number ID` → `WHATSAPP_PHONE_NUMBER_ID`, `WhatsApp Business Account ID` → `WHATSAPP_BUSINESS_ACCOUNT_ID`.
+3. **Permanent token**: *business.facebook.com → Settings → Users → System users* → add one (Admin) → *Assign assets*: your app and WhatsApp account (full control) → *Generate token* with `whatsapp_business_messaging` and `whatsapp_business_management`, expiration **Never** → `WHATSAPP_TOKEN`. (The token on the API Setup page expires in 24 h.)
+4. **Submit the templates**: put `WHATSAPP_TOKEN`, `WHATSAPP_BUSINESS_ACCOUNT_ID` and `APP_URL` in `.env`, then
+   ```bash
+   npm run whatsapp:templates            # submits all 8 for review
+   npm run whatsapp:templates -- status  # ✅ when Meta approves them (usually minutes)
+   ```
+5. **Vercel** → add `WHATSAPP_TOKEN` and `WHATSAPP_PHONE_NUMBER_ID` → Redeploy. In **Vecinos** the card shows *WhatsApp automático: activado* and **Enviar mensaje de prueba** sends Meta's `hello_world` to the administration's number.
+6. **Real number**: while testing, Meta only delivers to up to 5 numbers you add under *API Setup → To*. To message every neighbor, add your own number (*WhatsApp Manager → Phone numbers → Add*), verify the business (*Business settings → Security Center*) and add a payment method. The number you add can't be active in the regular WhatsApp app at the same time.
+
+Cost: Meta charges per delivered template message (utility, Mexico ≈ US$0.01 or less). The first messages in a new account and replies inside an open 24-h chat are free. Check current prices at developers.facebook.com/docs/whatsapp/pricing.
 
 ## Scripts
 | Script | Description |
@@ -77,7 +107,8 @@ In **GitHub Codespaces** the `.devcontainer` does all of this automatically.
 | `npm run db:seed` | Re-create demo users and sample data (local) |
 | `npm run db:studio` | Visual editor for the local DB |
 | `npm run turso:migrate` | Apply pending migrations to Turso |
-| `npm run create-admin -- email "Name" "password"` | Create/promote an admin (local or Turso) |
+| `npm run create-admin -- email "Name" "password" [phone]` | Create/promote an admin (local or Turso) |
+| `npm run whatsapp:templates [-- status]` | Submit WhatsApp templates to Meta / check approval |
 
 ## Business rules (`src/lib/constants.ts`)
 - Hours 08:00 – 22:00 in 30-minute steps, timezone `America/Mexico_City`.

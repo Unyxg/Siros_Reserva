@@ -5,6 +5,10 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getContactWhatsapp, getInviteCode } from "@/lib/settings";
 import { newAccountMessage, whatsappLink } from "@/lib/whatsapp";
+import { notifyNewAccount, sendPasswordReset } from "@/lib/notify";
+import { cloudEnabled } from "@/lib/whatsapp-cloud";
+import { createResetToken, resetRecentlyRequested } from "@/lib/password-reset";
+import { deliver } from "@/lib/deliver";
 import { hashToken } from "@/lib/tokens";
 
 /** `whatsapp` is an optional wa.me link the UI offers right after the action. */
@@ -41,11 +45,33 @@ export async function registerUser(input: z.input<typeof registerSchema>): Promi
     data: { name, email, house, phone, password: await bcrypt.hash(password, 10), status: "PENDING" },
   });
 
+  const d = await deliver(
+    () => notifyNewAccount(user),
+    async () => whatsappLink(await getContactWhatsapp(), newAccountMessage(user)),
+  );
   return {
     ok: true,
-    message: "¡Listo! Tu cuenta quedó registrada y la administración la revisará.",
-    whatsapp: whatsappLink(await getContactWhatsapp(), newAccountMessage(user)),
+    message: d.sent
+      ? "¡Listo! Ya avisamos a la administración por WhatsApp; te escribirán cuando tu cuenta esté aprobada."
+      : "¡Listo! Tu cuenta quedó registrada y la administración la revisará.",
+    whatsapp: d.whatsapp,
   };
+}
+
+/** Self-service reset (only with the Cloud API): sends the link to the account's WhatsApp. */
+export async function requestPasswordReset(emailInput: string): Promise<ActionResult> {
+  if (!cloudEnabled()) return { ok: false, message: "Pide el enlace a la administración por WhatsApp." };
+  const email = emailInput.trim().toLowerCase();
+  if (!z.string().email().safeParse(email).success) return { ok: false, message: "El correo no es válido." };
+
+  // Same answer whether or not the account exists, so accounts can't be discovered.
+  const generic: ActionResult = { ok: true, message: "Si el correo está registrado, te enviamos el enlace por WhatsApp al número de tu cuenta." };
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (!user || user.status === "DISABLED" || !user.phone) return generic;
+  if (await resetRecentlyRequested(user.id)) return generic;
+
+  await sendPasswordReset(user, await createResetToken(user.id));
+  return generic;
 }
 
 export async function resetPassword(token: string, password: string): Promise<ActionResult> {
