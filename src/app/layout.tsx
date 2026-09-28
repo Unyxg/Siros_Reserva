@@ -10,6 +10,8 @@ export const metadata: Metadata = {
   title: { default: "Reserva la Palapa", template: "%s · Reserva la Palapa" },
   description: "Solicita el uso del área común (Palapa) de tu residencial de forma fácil y rápida.",
   appleWebApp: { capable: true, title: "Palapa", statusBarStyle: "default" },
+  // Meta (Facebook) domain verification for the business portfolio
+  other: { "facebook-domain-verification": "v2fjtzpq5nw589a5c6wdf8kffmqcyo" },
 };
 
 export const viewport: Viewport = { themeColor: "#059669" };
