@@ -84,6 +84,7 @@ Without these settings the app uses free "tap to send" WhatsApp buttons. With th
 | New account | `palapa_cuenta_nueva` | admins + the administration's contact number |
 | Account approved | `palapa_registro_aprobado` | the neighbor |
 | Forgot password (self-service) | `palapa_nueva_contrasena` | the account's phone (button with a 24-h link) |
+| "Enviar mensaje de prueba" in Vecinos | `palapa_prueba` | the administration's number |
 
 Setup:
 1. **developers.facebook.com** → *My Apps → Create app* → type **Business** → add the **WhatsApp** product. Meta creates a WhatsApp Business Account and a free **test number**.

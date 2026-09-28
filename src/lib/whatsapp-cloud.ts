@@ -48,23 +48,41 @@ export async function sendTemplate(phone: string | null | undefined, key: Templa
   }
 }
 
-/** Sends Meta's built-in "hello_world" sample (exists in every account) to check the setup. */
+async function post(to: string, template: object) {
+  const res = await fetch(`${BASE}/${API_VERSION}/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ messaging_product: "whatsapp", to, type: "template", template }),
+  }).catch((e: Error) => ({ ok: false, text: async () => JSON.stringify({ error: { message: e.message } }) }) as const);
+  if (res.ok) return { ok: true as const };
+  const text = await res.text();
+  let error = text;
+  try {
+    const j = JSON.parse(text).error;
+    error = j?.error_data?.details ? `${j.message}: ${j.error_data.details}` : (j?.message ?? text);
+  } catch {}
+  return { ok: false as const, error: error.slice(0, 300) };
+}
+
+/**
+ * Checks the setup. Uses our own "palapa_prueba" template (real numbers can't send Meta's
+ * hello_world); on Meta's public test numbers, hello_world is the fallback.
+ */
 export async function sendTestMessage(phone: string | null | undefined): Promise<{ ok: boolean; error?: string }> {
   const to = toWhatsappNumber(phone);
   if (!cloudEnabled()) return { ok: false, error: "Faltan WHATSAPP_TOKEN y WHATSAPP_PHONE_NUMBER_ID en Vercel." };
   if (!to) return { ok: false, error: "Primero guarda el número de WhatsApp de la administración." };
-  const res = await fetch(`${BASE}/${API_VERSION}/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ messaging_product: "whatsapp", to, type: "template", template: { name: "hello_world", language: { code: "en_US" } } }),
-  }).catch((e: Error) => ({ ok: false, text: async () => e.message }) as const);
-  if (res.ok) return { ok: true };
-  const text = await res.text();
-  let msg = text;
-  try {
-    msg = JSON.parse(text).error?.message ?? text;
-  } catch {}
-  return { ok: false, error: msg.slice(0, 300) };
+
+  const own = await post(to, {
+    name: TEMPLATES.test.name,
+    language: { code: LANG },
+    components: [{ type: "body", parameters: [{ type: "text", text: "la administración" }] }],
+  });
+  if (own.ok) return own;
+  const fallback = await post(to, { name: "hello_world", language: { code: "en_US" } });
+  if (fallback.ok) return fallback;
+  // Report the error about our own template: that's the one that matters on a real number
+  return { ok: false, error: /does not exist|not found|132001/i.test(own.error) ? "La plantilla de prueba aún no está aprobada por Meta. Intenta más tarde." : own.error };
 }
 
 /** The number the app actually sends from (as Meta reports it for WHATSAPP_PHONE_NUMBER_ID). */

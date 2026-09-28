@@ -66,6 +66,12 @@ export const TEMPLATES = {
     examples: ["Ana"],
     button: { text: "Crear contraseña", path: "/restablecer?token=", kind: "token" },
   },
+  test: {
+    // Used by "Enviar mensaje de prueba" (Meta only allows hello_world from its test numbers)
+    name: "palapa_prueba",
+    body: "Prueba de avisos de la Palapa para {{1}}: si recibiste este mensaje, los avisos automáticos por WhatsApp de la app de reservaciones funcionan correctamente.",
+    examples: ["la administración"],
+  },
 } satisfies Record<string, TemplateDef>;
 
 export type TemplateKey = keyof typeof TEMPLATES;
