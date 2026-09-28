@@ -28,6 +28,9 @@ export default function AuthShell({ title, subtitle, children }: { title: string
           <h1 className="text-3xl font-extrabold text-stone-900 sm:text-4xl">{title}</h1>
           <p className="mt-2 text-lg text-stone-600">{subtitle}</p>
           <div className="mt-8">{children}</div>
+          <p className="mt-8 text-center text-base">
+            <a href="/privacidad" className="text-stone-500 underline-offset-4 hover:underline">Aviso de privacidad</a>
+          </p>
         </div>
       </section>
     </main>

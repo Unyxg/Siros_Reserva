@@ -93,6 +93,10 @@ export default function RegisterForm() {
         <PasswordInput id="confirm" name="confirm" autoComplete="new-password" minLength={8} required placeholder="Escríbela otra vez" />
       </div>
 
+      <p className="text-base text-stone-600">
+        Al crear tu cuenta aceptas el{" "}
+        <Link href="/privacidad" target="_blank" className="font-semibold text-brand-700 underline">aviso de privacidad</Link>.
+      </p>
       <button type="submit" disabled={loading} className="btn-primary w-full">
         {loading ? <Loader2 className="h-6 w-6 animate-spin" aria-hidden /> : <UserPlus className="h-6 w-6" aria-hidden />}
         {loading ? "Enviando…" : "Crear mi cuenta"}
