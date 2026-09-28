@@ -8,7 +8,7 @@ import { setContactWhatsapp, setInviteCode } from "@/lib/settings";
 import { appUrl } from "@/lib/app-url";
 import { accountApprovedMessage, passwordResetMessage, whatsappLink } from "@/lib/whatsapp";
 import { notifyAccountApproved, sendPasswordReset } from "@/lib/notify";
-import { sendTestMessage } from "@/lib/whatsapp-cloud";
+import { getSenderInfo, sendTestMessage } from "@/lib/whatsapp-cloud";
 import { getContactWhatsapp } from "@/lib/settings";
 import { deliver } from "@/lib/deliver";
 import { createResetToken } from "@/lib/password-reset";
@@ -129,7 +129,9 @@ export async function createPasswordResetLink(userId: string): Promise<ActionRes
 export async function testWhatsappCloud(): Promise<ActionResult> {
   if (!(await requireAdmin())) return denied;
   const res = await sendTestMessage(await getContactWhatsapp());
+  const sender = await getSenderInfo();
+  const from = sender?.number ? ` Se envió desde ${sender.number} (${sender.name}).` : "";
   return res.ok
-    ? { ok: true, message: "¡Mensaje de prueba enviado! Revisa el WhatsApp de la administración." }
+    ? { ok: true, message: `¡Mensaje de prueba enviado! Revisa el WhatsApp de la administración.${from}` }
     : { ok: false, message: `No se pudo enviar: ${res.error}` };
 }

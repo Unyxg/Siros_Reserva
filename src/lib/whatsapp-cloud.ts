@@ -66,3 +66,20 @@ export async function sendTestMessage(phone: string | null | undefined): Promise
   } catch {}
   return { ok: false, error: msg.slice(0, 300) };
 }
+
+/** The number the app actually sends from (as Meta reports it for WHATSAPP_PHONE_NUMBER_ID). */
+export async function getSenderInfo(): Promise<{ id: string; number?: string; name?: string; error?: string } | null> {
+  const id = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  if (!cloudEnabled() || !id) return null;
+  try {
+    const res = await fetch(`${BASE}/${API_VERSION}/${id}?fields=display_phone_number,verified_name`, {
+      headers: { Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}` },
+      next: { revalidate: 300 },
+    });
+    const j = await res.json();
+    if (!res.ok) return { id, error: j?.error?.message ?? "No se pudo consultar el número" };
+    return { id, number: j.display_phone_number, name: j.verified_name };
+  } catch {
+    return { id, error: "No se pudo consultar el número" };
+  }
+}

@@ -10,16 +10,17 @@ import { whatsappLink, whatsappShareLink } from "@/lib/whatsapp";
 import { formatDateTime } from "@/lib/format";
 import { ROLE_LABEL } from "@/lib/constants";
 import { ActiveToggle, ContactWhatsappForm, InviteCodeForm, PendingAccountActions, ResetPasswordButton, RoleSelect, TestWhatsappButton } from "./UserControls";
-import { cloudEnabled } from "@/lib/whatsapp-cloud";
+import { cloudEnabled, getSenderInfo } from "@/lib/whatsapp-cloud";
 
 export const metadata: Metadata = { title: "Vecinos" };
 
 export default async function UsersPage() {
   const me = await requireUser(["ADMIN"]);
-  const [users, code, contact] = await Promise.all([
+  const [users, code, contact, sender] = await Promise.all([
     prisma.user.findMany({ orderBy: [{ status: "asc" }, { name: "asc" }], include: { _count: { select: { reservations: true } } } }),
     getInviteCode(),
     getContactWhatsapp(),
+    getSenderInfo(),
   ]);
   const pending = users.filter((u) => u.status === "PENDING");
   const others = users.filter((u) => u.status !== "PENDING");
@@ -54,6 +55,15 @@ export default async function UsersPage() {
               ? "Los avisos se envían solos por la API de WhatsApp de Meta. Si un envío falla, aparece el botón verde para mandarlo a mano."
               : "Los avisos se mandan con el botón verde (gratis). Para enviarlos solos, agrega las claves de Meta en Vercel."}
           </p>
+          {sender && (
+            <p className="mt-1 text-base font-semibold text-stone-800">
+              {sender.number ? (
+                <>Se envían desde: {sender.number} · {sender.name}</>
+              ) : (
+                <span className="text-rose-700">No se pudo leer el número configurado (ID {sender.id}): {sender.error}</span>
+              )}
+            </p>
+          )}
         </div>
         {cloudEnabled() && <TestWhatsappButton />}
       </section>
