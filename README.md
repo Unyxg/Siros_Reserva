@@ -82,7 +82,7 @@ Without these settings the app uses free "tap to send" WhatsApp buttons. With th
 | Cancelled by staff | `palapa_reserva_cancelada` | the neighbor |
 | Neighbor frees an approved slot | `palapa_horario_liberado` | approvers + admins |
 | New account | `palapa_cuenta_nueva` | admins + the administration's contact number |
-| Account approved | `palapa_cuenta_aprobada` | the neighbor |
+| Account approved | `palapa_registro_aprobado` | the neighbor |
 | Forgot password (self-service) | `palapa_nueva_contrasena` | the account's phone (button with a 24-h link) |
 
 Setup:

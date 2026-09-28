@@ -31,7 +31,7 @@ function payload(t: TemplateDef) {
       ],
     });
   }
-  return { name: t.name, language: LANG, category: "UTILITY", components };
+  return { name: t.name, language: LANG, category: t.category ?? "UTILITY", components };
 }
 
 async function graph(path: string, init?: RequestInit) {

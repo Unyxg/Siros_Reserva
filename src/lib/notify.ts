@@ -53,7 +53,7 @@ export async function notifyNewAccount(user: Person) {
 }
 
 export function notifyAccountApproved(user: Person) {
-  return sendTemplate(user.phone, "accountApproved", [first(user.name), user.email ?? "tu correo"]);
+  return sendTemplate(user.phone, "accountApproved", [user.name]);
 }
 
 export function sendPasswordReset(user: Person, token: string) {

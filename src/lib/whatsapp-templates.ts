@@ -10,6 +10,8 @@ export type TemplateDef = {
   name: string;
   body: string;
   examples: string[];
+  /** Meta category; defaults to UTILITY (cheapest). */
+  category?: "UTILITY" | "MARKETING";
   /** URL button: "static" opens the app; "token" appends a variable (used for the reset link). */
   button?: { text: string; path: string; kind: "static" | "token" };
 };
@@ -51,10 +53,12 @@ export const TEMPLATES = {
     button: { text: "Revisar cuentas", path: "/dashboard/admin/usuarios", kind: "static" },
   },
   accountApproved: {
-    name: "palapa_cuenta_aprobada",
-    body: "¡Hola {{1}}! Tu cuenta de la app de la Palapa ya fue aprobada. Entra con tu correo {{2}} y tu contraseña.",
-    examples: ["Luis", "luis@correo.com"],
-    button: { text: "Entrar a la app", path: "/login", kind: "static" },
+    // Wording that mentions logging in / passwords gets rejected as the wrong category,
+    // so this one only reports the registration status.
+    name: "palapa_registro_aprobado",
+    body: "Aviso de la Palapa: {{1}}, la administración aprobó tu registro como vecino. Ya puedes apartar la Palapa desde la app de reservaciones.",
+    examples: ["Luis Gómez"],
+    button: { text: "Abrir la app", path: "/login", kind: "static" },
   },
   passwordReset: {
     name: "palapa_nueva_contrasena",
