@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import toast from "react-hot-toast";
 import { CalendarCheck, CalendarX2, ChevronLeft, ChevronRight, Clock, Loader2, Send, Users } from "lucide-react";
 import { createReservation } from "@/app/actions/reservations";
+import { showResult } from "@/components/resultToast";
 import { MAX_GUESTS, TIME_OPTIONS } from "@/lib/constants";
 import { formatLongDate, formatTime, timesOverlap } from "@/lib/format";
 
@@ -77,12 +78,8 @@ export default function ReservationForm({ today, maxDate, busy, blocked }: { tod
 
     startTransition(async () => {
       const res = await createReservation({ date, startTime, endTime, guests, reason });
-      if (res.ok) {
-        toast.success(res.message);
-        reset();
-      } else {
-        toast.error(res.message);
-      }
+      showResult(res, "Avisar al comité por WhatsApp");
+      if (res.ok) reset();
     });
   }
 
@@ -245,7 +242,7 @@ export default function ReservationForm({ today, maxDate, busy, blocked }: { tod
           {pending ? "Enviando…" : "Enviar solicitud"}
         </button>
         <p className="mt-3 flex items-start gap-2 text-base text-stone-500">
-          <Clock className="mt-0.5 h-5 w-5 shrink-0" aria-hidden /> Un aprobador revisará tu solicitud y verás la respuesta abajo.
+          <Clock className="mt-0.5 h-5 w-5 shrink-0" aria-hidden /> Un aprobador revisará tu solicitud. Verás la respuesta abajo en “Mis solicitudes”.
         </p>
       </section>
     </form>

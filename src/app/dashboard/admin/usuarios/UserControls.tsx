@@ -1,25 +1,23 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import toast from "react-hot-toast";
 import type { Role } from "@prisma/client";
-import { Check, KeyRound, Loader2, Power, X } from "lucide-react";
-import { approveAccount, changeRole, rejectAccount, setAccountActive, updateInviteCode } from "@/app/actions/admin";
+import { Check, KeyRound, Loader2, LockKeyhole, MessageCircle, Power, X } from "lucide-react";
+import { approveAccount, changeRole, createPasswordResetLink, rejectAccount, setAccountActive, updateContactWhatsapp, updateInviteCode } from "@/app/actions/admin";
+import { showResult } from "@/components/resultToast";
 import type { ActionResult } from "@/app/actions/auth";
 
-function useAction() {
+function useAction(whatsappLabel?: string) {
   const [pending, startTransition] = useTransition();
   const run = (fn: () => Promise<ActionResult>) =>
     startTransition(async () => {
-      const res = await fn();
-      if (res.ok) toast.success(res.message);
-      else toast.error(res.message);
+      showResult(await fn(), whatsappLabel);
     });
   return { pending, run };
 }
 
 export function PendingAccountActions({ id }: { id: string }) {
-  const { pending, run } = useAction();
+  const { pending, run } = useAction("Avisarle por WhatsApp");
   return (
     <div className="grid grid-cols-2 gap-2">
       <button disabled={pending} onClick={() => run(() => approveAccount(id))} className="btn-primary min-h-11 py-2 text-base">
@@ -91,6 +89,47 @@ export function InviteCodeForm({ code }: { code: string }) {
       </div>
       <button disabled={pending || value === code} className="btn-primary">
         {pending && <Loader2 className="h-5 w-5 animate-spin" aria-hidden />} Cambiar código
+      </button>
+    </form>
+  );
+}
+
+/** Creates a one-time link to set a new password and offers to send it by WhatsApp. */
+export function ResetPasswordButton({ id }: { id: string }) {
+  const { pending, run } = useAction("Enviar enlace por WhatsApp");
+  return (
+    <button
+      disabled={pending}
+      onClick={() => run(() => createPasswordResetLink(id))}
+      className="btn-secondary min-h-11 px-3 py-2 text-base"
+      title="Crear enlace para nueva contraseña"
+    >
+      {pending ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : <LockKeyhole className="h-5 w-5" aria-hidden />}
+      <span className="sr-only sm:not-sr-only">Contraseña</span>
+    </button>
+  );
+}
+
+export function ContactWhatsappForm({ phone }: { phone: string }) {
+  const [value, setValue] = useState(phone);
+  const { pending, run } = useAction();
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        run(() => updateContactWhatsapp(value));
+      }}
+      className="flex flex-wrap items-end gap-3"
+    >
+      <div className="min-w-48 flex-1">
+        <label htmlFor="contact" className="label flex items-center gap-2">
+          <MessageCircle className="h-5 w-5 text-[#25D366]" aria-hidden /> WhatsApp de la administración
+        </label>
+        <input id="contact" type="tel" inputMode="tel" value={value} onChange={(e) => setValue(e.target.value)} className="input" placeholder="55 1234 5678" />
+        <p className="mt-1 text-base text-stone-500">Aquí te escriben los vecinos nuevos y quien olvidó su contraseña.</p>
+      </div>
+      <button disabled={pending || value === phone} className="btn-primary">
+        {pending && <Loader2 className="h-5 w-5 animate-spin" aria-hidden />} Guardar
       </button>
     </form>
   );

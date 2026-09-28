@@ -1,13 +1,15 @@
 "use server";
 
+import { randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
-import { after } from "next/server";
 import type { Role } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";
-import { setInviteCode } from "@/lib/settings";
+import { setContactWhatsapp, setInviteCode } from "@/lib/settings";
+import { appUrl } from "@/lib/app-url";
+import { accountApprovedMessage, passwordResetMessage, whatsappLink } from "@/lib/whatsapp";
+import { hashToken } from "@/lib/tokens";
 import { todayISO } from "@/lib/format";
-import { notifyAccountApproved } from "@/lib/notify";
 import type { ActionResult } from "@/app/actions/auth";
 
 async function requireAdmin() {
@@ -20,9 +22,8 @@ const denied: ActionResult = { ok: false, message: "Solo la administración pued
 export async function approveAccount(userId: string): Promise<ActionResult> {
   if (!(await requireAdmin())) return denied;
   const user = await prisma.user.update({ where: { id: userId }, data: { status: "ACTIVE" } });
-  after(() => notifyAccountApproved(user));
   revalidatePath("/dashboard", "layout");
-  return { ok: true, message: `Cuenta de ${user.name} aprobada. Se le avisó por correo.` };
+  return { ok: true, message: `Cuenta de ${user.name} aprobada.`, whatsapp: whatsappLink(user.phone, accountApprovedMessage(user)) };
 }
 
 /** Rejecting a pending sign-up deletes it, so the person can register again if it was a mistake. */
@@ -86,4 +87,33 @@ export async function unblockDate(id: string): Promise<ActionResult> {
   await prisma.blockedDate.delete({ where: { id } }).catch(() => null);
   revalidatePath("/dashboard", "layout");
   return { ok: true, message: "Día desbloqueado." };
+}
+
+export async function updateContactWhatsapp(phone: string): Promise<ActionResult> {
+  if (!(await requireAdmin())) return denied;
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length < 10 || digits.length > 13) return { ok: false, message: "Escribe el número a 10 dígitos." };
+  await setContactWhatsapp(digits);
+  revalidatePath("/dashboard/admin/usuarios");
+  return { ok: true, message: "Número de contacto guardado." };
+}
+
+const RESET_TTL_MS = 24 * 60 * 60 * 1000;
+
+/** Creates a single-use, 24-hour link to set a new password; the admin sends it by WhatsApp. */
+export async function createPasswordResetLink(userId: string): Promise<ActionResult> {
+  if (!(await requireAdmin())) return denied;
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) return { ok: false, message: "No se encontró la cuenta." };
+
+  const token = randomBytes(32).toString("base64url");
+  await prisma.passwordResetToken.deleteMany({ where: { userId, usedAt: null } });
+  await prisma.passwordResetToken.create({ data: { userId, tokenHash: hashToken(token), expiresAt: new Date(Date.now() + RESET_TTL_MS) } });
+
+  const link = appUrl(`/restablecer?token=${token}`);
+  return {
+    ok: true,
+    message: `Enlace creado para ${user.name}. Envíaselo por WhatsApp.`,
+    whatsapp: whatsappLink(user.phone, passwordResetMessage(user, link)) ?? `https://wa.me/?text=${encodeURIComponent(passwordResetMessage(user, link))}`,
+  };
 }

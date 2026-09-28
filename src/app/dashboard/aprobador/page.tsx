@@ -8,7 +8,6 @@ import ReviewActions from "./ReviewActions";
 import StaffCancelButton from "./StaffCancelButton";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
-import { appUrl } from "@/lib/app-url";
 import { reservationWhatsappMessage, whatsappLink } from "@/lib/whatsapp";
 import { addDaysISO, formatDateTime, formatLongDate, formatShortDate, formatTime, timesOverlap, todayISO } from "@/lib/format";
 
@@ -33,7 +32,6 @@ export default async function ApproverDashboard() {
   ]);
 
   const blockedMap = new Map(blocked.map((b) => [b.date, b.reason]));
-  const link = appUrl("/dashboard");
 
   // Flag requests that collide with an approved booking, a blocked day, or another pending one.
   const conflictOf = (r: (typeof pending)[number]) => {
@@ -50,7 +48,7 @@ export default async function ApproverDashboard() {
       <AutoRefresh seconds={15} />
       <PageHeader
         title="Solicitudes por aprobar"
-        subtitle="Revisa cada solicitud y decide. El vecino recibe un correo automático, y puedes avisarle también por WhatsApp."
+        subtitle="Revisa cada solicitud y decide. Después toca el botón verde para avisarle al vecino por WhatsApp."
         action={
           <span className="rounded-2xl bg-amber-100 px-5 py-3 text-lg font-extrabold text-amber-900">
             {pending.length} pendiente{pending.length === 1 ? "" : "s"}
@@ -121,7 +119,7 @@ export default async function ApproverDashboard() {
                 </span>
                 <span className="flex flex-wrap items-center gap-2">
                   <StatusBadge status={r.status} />
-                  <WhatsAppButton compact label="WhatsApp" href={whatsappLink(r.user.phone, reservationWhatsappMessage(r.user.name, r, link))} />
+                  <WhatsAppButton compact label="WhatsApp" href={whatsappLink(r.user.phone, reservationWhatsappMessage(r.user.name, r))} />
                 </span>
               </li>
             ))}
@@ -151,7 +149,7 @@ export default async function ApproverDashboard() {
                   )}
                 </span>
                 <span className="flex flex-wrap gap-2">
-                  <WhatsAppButton compact label="WhatsApp" href={whatsappLink(r.user.phone, reservationWhatsappMessage(r.user.name, r, link))} />
+                  <WhatsAppButton compact label="WhatsApp" href={whatsappLink(r.user.phone, reservationWhatsappMessage(r.user.name, r))} />
                   <StaffCancelButton id={r.id} />
                 </span>
               </li>

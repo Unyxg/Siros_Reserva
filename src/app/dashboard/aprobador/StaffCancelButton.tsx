@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import toast from "react-hot-toast";
 import { Ban, Loader2 } from "lucide-react";
 import { cancelReservation } from "@/app/actions/reservations";
+import { showResult } from "@/components/resultToast";
 
 /** Staff cancels an approved booking (reason required) so the slot opens up again. */
 export default function StaffCancelButton({ id }: { id: string }) {
@@ -20,7 +20,7 @@ export default function StaffCancelButton({ id }: { id: string }) {
 
   return (
     <div className="w-full space-y-2">
-      <label htmlFor={`cancel-${id}`} className="label">Motivo de la cancelación (se le avisará al vecino)</label>
+      <label htmlFor={`cancel-${id}`} className="label">Motivo de la cancelación (lo verá el vecino)</label>
       <input id={`cancel-${id}`} autoFocus value={reason} onChange={(e) => setReason(e.target.value)} maxLength={300} className="input" placeholder="Ej. Reparación urgente del techo" />
       <div className="flex flex-wrap gap-2">
         <button
@@ -28,8 +28,7 @@ export default function StaffCancelButton({ id }: { id: string }) {
           onClick={() =>
             startTransition(async () => {
               const res = await cancelReservation(id, reason);
-              if (res.ok) toast.success(res.message);
-              else toast.error(res.message);
+              showResult(res, "Avisar al vecino por WhatsApp");
             })
           }
           className="btn-danger min-h-11 px-4 py-2 text-base"

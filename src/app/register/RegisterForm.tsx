@@ -3,13 +3,14 @@
 import { useState } from "react";
 import Link from "next/link";
 import toast from "react-hot-toast";
-import { Hourglass, KeyRound, Loader2, UserPlus } from "lucide-react";
+import { Hourglass, KeyRound, Loader2, MessageCircle, UserPlus } from "lucide-react";
 import PasswordInput from "@/components/PasswordInput";
 import { registerUser } from "@/app/actions/auth";
 
 export default function RegisterForm() {
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
+  const [adminLink, setAdminLink] = useState<string | null>(null);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -35,6 +36,7 @@ export default function RegisterForm() {
       return;
     }
     toast.success("¡Cuenta registrada!");
+    setAdminLink(result.whatsapp ?? null);
     setDone(true);
   }
 
@@ -44,9 +46,14 @@ export default function RegisterForm() {
         <Hourglass className="mx-auto h-14 w-14 text-amber-500" aria-hidden />
         <h2 className="mt-4 text-2xl font-extrabold text-stone-900">Tu cuenta está en revisión</h2>
         <p className="mt-2 text-lg text-stone-600">
-          La administración confirmará que eres vecino del residencial. Te enviaremos un correo cuando puedas entrar.
+          La administración confirmará que eres vecino del residencial y te avisará por WhatsApp cuando puedas entrar.
         </p>
-        <Link href="/login" className="btn-secondary mt-6">Volver a Iniciar sesión</Link>
+        {adminLink && (
+          <a href={adminLink} target="_blank" rel="noopener noreferrer" className="btn mt-6 w-full bg-[#25D366] text-white shadow-md shadow-green-600/20 hover:bg-[#1ebe5b]">
+            <MessageCircle className="h-6 w-6" aria-hidden /> Avisar a la administración
+          </a>
+        )}
+        <Link href="/login" className="btn-secondary mt-3 w-full">Volver a Iniciar sesión</Link>
       </div>
     );
   }

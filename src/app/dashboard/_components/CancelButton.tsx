@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import toast from "react-hot-toast";
 import { Loader2, X } from "lucide-react";
 import { cancelReservation } from "@/app/actions/reservations";
+import { showResult } from "@/components/resultToast";
 
 export default function CancelButton({ id, approved }: { id: string; approved?: boolean }) {
   const [confirming, setConfirming] = useState(false);
@@ -25,8 +25,7 @@ export default function CancelButton({ id, approved }: { id: string; approved?: 
         onClick={() =>
           startTransition(async () => {
             const res = await cancelReservation(id);
-            if (res.ok) toast.success(res.message);
-            else toast.error(res.message);
+            showResult(res, "Avisar al comité por WhatsApp");
             setConfirming(false);
           })
         }

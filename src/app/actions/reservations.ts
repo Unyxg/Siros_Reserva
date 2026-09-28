@@ -1,13 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { after } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser, isStaff } from "@/lib/session";
 import { addDaysISO, timesOverlap, todayISO } from "@/lib/format";
 import { MAX_DAYS_AHEAD, MAX_GUESTS, TIME_OPTIONS } from "@/lib/constants";
-import { notifyNewReservation, notifyReservationCancelled, notifyReservationReviewed } from "@/lib/notify";
+import { getCommitteeWhatsapp } from "@/lib/settings";
+import { newRequestMessage, reservationWhatsappMessage, residentCancelledMessage, whatsappLink } from "@/lib/whatsapp";
 import type { ActionResult } from "@/app/actions/auth";
 
 function revalidateDashboards() {
@@ -56,9 +56,12 @@ export async function createReservation(input: z.input<typeof createSchema>): Pr
 
   const reservation = await prisma.reservation.create({ data: { userId: user.id, date, startTime, endTime, guests, reason } });
 
-  after(() => notifyNewReservation(reservation, user));
   revalidateDashboards();
-  return { ok: true, message: "¡Solicitud enviada! Te avisaremos por correo cuando sea revisada." };
+  return {
+    ok: true,
+    message: "¡Solicitud enviada! Verás la respuesta aquí mismo.",
+    whatsapp: whatsappLink(await getCommitteeWhatsapp(), newRequestMessage(user, reservation)),
+  };
 }
 
 /** Residents cancel their own bookings; approvers/admins can cancel any (with a reason) to free the slot. */
@@ -82,9 +85,17 @@ export async function cancelReservation(id: string, reason?: string): Promise<Ac
     data: { status: "CANCELLED", cancelReason: trimmed, cancelledAt: new Date() },
   });
 
-  after(() => notifyReservationCancelled(updated, reservation.user, byStaff));
   revalidateDashboards();
-  return { ok: true, message: "Reservación cancelada. El horario quedó libre." };
+  return {
+    ok: true,
+    message: "Reservación cancelada. El horario quedó libre.",
+    // Staff tell the neighbor; a neighbor tells the committee
+    whatsapp: byStaff
+      ? whatsappLink(reservation.user.phone, reservationWhatsappMessage(reservation.user.name, updated))
+      : reservation.status === "APPROVED"
+        ? whatsappLink(await getCommitteeWhatsapp(), residentCancelledMessage(reservation.user, updated))
+        : null,
+  };
 }
 
 export async function reviewReservation(id: string, decision: "APPROVED" | "REJECTED", note?: string): Promise<ActionResult> {
@@ -111,10 +122,10 @@ export async function reviewReservation(id: string, decision: "APPROVED" | "REJE
     data: { status: decision, reviewNote: trimmed, reviewedById: user.id, reviewedAt: new Date() },
   });
 
-  after(() => notifyReservationReviewed(updated, reservation.user));
   revalidateDashboards();
   return {
     ok: true,
-    message: decision === "APPROVED" ? "Solicitud aprobada ✅ Se avisó por correo." : "Solicitud rechazada. Se avisó por correo.",
+    message: decision === "APPROVED" ? "Solicitud aprobada" : "Solicitud rechazada",
+    whatsapp: whatsappLink(reservation.user.phone, reservationWhatsappMessage(reservation.user.name, updated)),
   };
 }

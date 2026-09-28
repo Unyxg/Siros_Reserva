@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import toast from "react-hot-toast";
 import { Check, Loader2, X } from "lucide-react";
 import { reviewReservation } from "@/app/actions/reservations";
+import { showResult } from "@/components/resultToast";
 
 export default function ReviewActions({ id }: { id: string }) {
   const [mode, setMode] = useState<"idle" | "rejecting">("idle");
@@ -15,8 +15,7 @@ export default function ReviewActions({ id }: { id: string }) {
     setBusy(decision);
     startTransition(async () => {
       const res = await reviewReservation(id, decision, note);
-      if (res.ok) toast.success(res.message);
-      else toast.error(res.message);
+      showResult(res, "Avisar al vecino por WhatsApp");
       setBusy(null);
     });
   }

@@ -1,15 +1,14 @@
 "use server";
 
-import { createHash, randomBytes } from "node:crypto";
-import { after } from "next/server";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { getInviteCode } from "@/lib/settings";
-import { appUrl } from "@/lib/app-url";
-import { notifyNewAccount, sendPasswordResetEmail } from "@/lib/notify";
+import { getContactWhatsapp, getInviteCode } from "@/lib/settings";
+import { newAccountMessage, whatsappLink } from "@/lib/whatsapp";
+import { hashToken } from "@/lib/tokens";
 
-export type ActionResult = { ok: true; message: string } | { ok: false; message: string };
+/** `whatsapp` is an optional wa.me link the UI offers right after the action. */
+export type ActionResult = { ok: true; message: string; whatsapp?: string | null } | { ok: false; message: string };
 
 const phoneSchema = z
   .string()
@@ -42,30 +41,11 @@ export async function registerUser(input: z.input<typeof registerSchema>): Promi
     data: { name, email, house, phone, password: await bcrypt.hash(password, 10), status: "PENDING" },
   });
 
-  after(() => notifyNewAccount(user));
-  return { ok: true, message: "¡Listo! Tu cuenta quedó registrada y la administración la revisará." };
-}
-
-const hashToken = (t: string) => createHash("sha256").update(t).digest("hex");
-const RESET_TTL_MS = 60 * 60 * 1000;
-
-export async function requestPasswordReset(emailInput: string): Promise<ActionResult> {
-  const email = emailInput.trim().toLowerCase();
-  // Same answer whether or not the account exists, so emails can't be discovered.
-  const generic: ActionResult = { ok: true, message: "Si el correo está registrado, te enviamos un enlace para crear una nueva contraseña." };
-  if (!z.string().email().safeParse(email).success) return { ok: false, message: "El correo no es válido." };
-
-  const user = await prisma.user.findUnique({ where: { email } });
-  if (!user || user.status === "DISABLED") return generic;
-
-  const token = randomBytes(32).toString("base64url");
-  await prisma.passwordResetToken.deleteMany({ where: { userId: user.id, usedAt: null } });
-  await prisma.passwordResetToken.create({
-    data: { userId: user.id, tokenHash: hashToken(token), expiresAt: new Date(Date.now() + RESET_TTL_MS) },
-  });
-
-  after(() => sendPasswordResetEmail(user, appUrl(`/restablecer?token=${token}`)));
-  return generic;
+  return {
+    ok: true,
+    message: "¡Listo! Tu cuenta quedó registrada y la administración la revisará.",
+    whatsapp: whatsappLink(await getContactWhatsapp(), newAccountMessage(user)),
+  };
 }
 
 export async function resetPassword(token: string, password: string): Promise<ActionResult> {
@@ -73,7 +53,7 @@ export async function resetPassword(token: string, password: string): Promise<Ac
 
   const row = await prisma.passwordResetToken.findUnique({ where: { tokenHash: hashToken(token) } });
   if (!row || row.usedAt || row.expiresAt < new Date())
-    return { ok: false, message: "El enlace ya no es válido o expiró. Pide uno nuevo." };
+    return { ok: false, message: "El enlace ya no es válido o expiró. Pide uno nuevo a la administración." };
 
   await prisma.$transaction([
     prisma.user.update({ where: { id: row.userId }, data: { password: await bcrypt.hash(password, 10) } }),

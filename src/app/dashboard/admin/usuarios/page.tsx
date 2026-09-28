@@ -4,20 +4,21 @@ import PageHeader from "@/components/PageHeader";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
-import { getInviteCode } from "@/lib/settings";
+import { getContactWhatsapp, getInviteCode } from "@/lib/settings";
 import { appUrl } from "@/lib/app-url";
-import { whatsappLink } from "@/lib/whatsapp";
+import { whatsappLink, whatsappShareLink } from "@/lib/whatsapp";
 import { formatDateTime } from "@/lib/format";
 import { ROLE_LABEL } from "@/lib/constants";
-import { ActiveToggle, InviteCodeForm, PendingAccountActions, RoleSelect } from "./UserControls";
+import { ActiveToggle, ContactWhatsappForm, InviteCodeForm, PendingAccountActions, ResetPasswordButton, RoleSelect } from "./UserControls";
 
 export const metadata: Metadata = { title: "Vecinos" };
 
 export default async function UsersPage() {
   const me = await requireUser(["ADMIN"]);
-  const [users, code] = await Promise.all([
+  const [users, code, contact] = await Promise.all([
     prisma.user.findMany({ orderBy: [{ status: "asc" }, { name: "asc" }], include: { _count: { select: { reservations: true } } } }),
     getInviteCode(),
+    getContactWhatsapp(),
   ]);
   const pending = users.filter((u) => u.status === "PENDING");
   const others = users.filter((u) => u.status !== "PENDING");
@@ -28,11 +29,17 @@ export default async function UsersPage() {
     <>
       <PageHeader title="Vecinos y permisos" subtitle="Aprueba cuentas nuevas, asigna aprobadores y administra el código de invitación." />
 
-      <section className="card p-5 sm:p-6">
-        <InviteCodeForm code={code} />
-        <div className="mt-4 flex flex-wrap items-center gap-3 text-base text-stone-600">
-          <span>Compártelo con los vecinos:</span>
-          <WhatsAppButton href={`https://wa.me/?text=${encodeURIComponent(inviteMsg)}`} label="Compartir invitación" />
+      <section className="grid gap-5 lg:grid-cols-2">
+        <div className="card p-5 sm:p-6">
+          <InviteCodeForm code={code} />
+          <div className="mt-4 flex flex-wrap items-center gap-3 text-base text-stone-600">
+            <span>Compártelo con los vecinos:</span>
+            <WhatsAppButton href={whatsappShareLink(inviteMsg)} label="Compartir invitación" />
+          </div>
+        </div>
+        <div className="card p-5 sm:p-6">
+          <ContactWhatsappForm phone={contact ?? ""} />
+          {!contact && <p className="mt-3 rounded-2xl bg-amber-50 px-4 py-2.5 text-base font-semibold text-amber-900">⚠️ Agrega un número para que los vecinos puedan contactarte.</p>}
         </div>
       </section>
 
@@ -54,6 +61,7 @@ export default async function UsersPage() {
                   {u.phone && <p className="flex items-center gap-2"><Phone className="h-5 w-5 text-stone-400" aria-hidden /> {u.phone}</p>}
                 </div>
                 <p className="mt-2 text-sm text-stone-500">Se registró el {formatDateTime(u.createdAt)}</p>
+                <p className="mt-1 text-base text-stone-600">Confirma que sí vive en el residencial antes de aprobar.</p>
                 <div className="mt-4">
                   <PendingAccountActions id={u.id} />
                 </div>
@@ -85,6 +93,7 @@ export default async function UsersPage() {
                   <span className="w-44">
                     <RoleSelect id={u.id} role={u.role} disabled={self} />
                   </span>
+                  <ResetPasswordButton id={u.id} />
                   <ActiveToggle id={u.id} active={u.status === "ACTIVE"} disabled={self} />
                 </span>
                 <span className="sr-only">Rol actual: {ROLE_LABEL[u.role]}</span>

@@ -12,19 +12,19 @@ Residential booking app for a community gazebo. **UI is 100% Spanish**; code is 
 Everyone can also book the Palapa for themselves from **Reservar**.
 
 ## Features
-- **Invite code + account approval**: new sign-ups need the neighborhood code, then an admin approves them (email to admins and to the neighbor).
+- **Invite code + account approval**: new sign-ups need the neighborhood code, then an admin approves them.
 - **Availability calendar**: red = booked, yellow = under review, striped grey = closed day (with the reason shown).
-- **Emails via Resend**: new request, approved (with Google Calendar button + `.ics` attachment), rejected, cancelled, account approved, password reset.
-- **WhatsApp (free)**: green buttons open WhatsApp with a pre-written message to the neighbor (`wa.me` links, no API cost).
+- **Notices by WhatsApp (free, no email needed)**: after each action a green button opens WhatsApp with the message already written; the person just taps send (`wa.me` links, no API or cost):
+  new account → administration · account approved → neighbor · new request → committee · approved / rejected / cancelled → neighbor.
 - **Add to calendar**: Google Calendar link and `.ics` download (iPhone / Outlook) on approved bookings.
-- **Forgot password**: one-hour, single-use email link (only a hash is stored).
+- **Forgot password**: the neighbor asks the administration by WhatsApp; the admin taps **Contraseña** in *Vecinos* and sends a single-use, 24-hour link (only a hash is stored).
 - **Blocked days**: the admin closes dates; nobody can request or approve them.
 - **Excel export** (admin only): reservations, residents and closed days in one `.xlsx`.
 - **Installable app (PWA)**: “Instalar” prompt on Android/desktop, instructions on iPhone, offline page.
 - Role changes and deactivated accounts take effect immediately (checked on every request).
 
 ## Stack
-Next.js 16 (App Router, Server Actions) · Tailwind CSS v4 · Prisma 6 + libSQL adapter (SQLite locally, **Turso** in production) · NextAuth v4 · **Resend** · ExcelJS · lucide-react · react-hot-toast · zod
+Next.js 16 (App Router, Server Actions) · Tailwind CSS v4 · Prisma 6 + libSQL adapter (SQLite locally, **Turso** in production) · NextAuth v4 · ExcelJS · lucide-react · react-hot-toast · zod
 
 ## Local development (Codespaces or your computer)
 
@@ -35,7 +35,6 @@ npm run db:migrate       # creates prisma/dev.db and seeds demo data
 npm run dev              # http://localhost:3000
 ```
 In **GitHub Codespaces** the `.devcontainer` does all of this automatically.
-Without `RESEND_API_KEY`, emails are printed in the terminal, including their links (e.g. the password-reset link).
 
 ### Demo accounts (password `Palapa123`, invite code `PALAPA2026`)
 | Rol | Correo |
@@ -45,33 +44,30 @@ Without `RESEND_API_KEY`, emails are printed in the terminal, including their li
 | Administrador | `admin@palapa.com` |
 | Cuenta por aprobar | `nuevo@palapa.com` |
 
-## Deploying: Vercel + Turso + Resend
+## Deploying: Vercel + Turso
 
 1. **Turso** (database, free tier)
    ```bash
    # install the CLI: https://docs.turso.tech/cli/installation
    turso auth signup
-   turso db create palapa --location dfw      # a US-south location, close to Mexico
+   turso db create palapa
    turso db show palapa --url                 # -> TURSO_DATABASE_URL
    turso db tokens create palapa              # -> TURSO_AUTH_TOKEN
    ```
-   Put both values in your `.env` (`TURSO_DATABASE_URL="libsql://…"`, `TURSO_AUTH_TOKEN="…"`), then create the tables and your admin account:
+   Put both values in your `.env`, then create the tables and your admin account (the phone is optional):
    ```bash
    npm run turso:migrate
-   npm run create-admin -- tu@correo.com "Tu Nombre" "UnaContraseñaSegura"
+   npm run create-admin -- tu@correo.com "Tu Nombre" "UnaContraseñaSegura" 5512345678
    ```
    While those two lines are in `.env`, `npm run dev` also uses Turso. Empty them again to go back to the local file.
    Run `turso:migrate` again whenever a new folder appears in `prisma/migrations`.
 
-2. **Resend** (email, 3,000/month free)
-   - Create an account at resend.com → *Domains* → add your domain and the DNS records it shows.
-   - Create an API key → `RESEND_API_KEY`. Set `EMAIL_FROM`, e.g. `Reserva la Palapa <avisos@tu-dominio.com>`.
-   - Without a verified domain, Resend only delivers to your own email (fine for testing).
-
-3. **Vercel** (hosting, free Hobby plan)
+2. **Vercel** (hosting, free Hobby plan)
    - *Add New → Project* → import this GitHub repo (framework: Next.js, defaults are fine).
-   - Environment variables: `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL` (your final URL), `RESEND_API_KEY`, `EMAIL_FROM`, `DATABASE_URL=file:./dev.db` (only needed by `prisma generate`).
-   - Deploy, log in with the admin you created, go to **Vecinos**, change the invite code and share it with the green *Compartir invitación* button.
+   - Environment variables (only three): `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`, `NEXTAUTH_SECRET`.
+   - Deploy. Your address is shown on the project's **Overview** under *Domains*.
+
+3. **First steps in the app**: log in with your admin, go to **Vecinos**, save the administration's WhatsApp number, change the invite code and share it with *Compartir invitación*.
 
 ## Scripts
 | Script | Description |
@@ -97,7 +93,7 @@ src/app/actions/       Server Actions: auth.ts, reservations.ts, admin.ts
 src/app/api/           NextAuth, .ics download, Excel export
 src/app/dashboard/     resident page · aprobador/ · admin/ (panel, usuarios/, fechas/)
 src/app/login|register|recuperar|restablecer
-src/lib/               prisma, auth, session guards, email (Resend), notify, whatsapp, calendar, format
+src/lib/               prisma, auth, session guards, settings, whatsapp messages, calendar, format
 public/                icons, manifest assets, sw.js, offline.html, images/palapa.svg
 ```
 

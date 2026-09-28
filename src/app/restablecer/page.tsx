@@ -13,7 +13,7 @@ export default async function ResetPage({ searchParams }: PageProps<"/restablece
         <ResetForm token={token} />
       ) : (
         <p className="text-lg text-stone-600">
-          El enlace no es válido. <Link href="/recuperar" className="font-bold text-brand-700 underline">Pide uno nuevo</Link>.
+          El enlace no es válido. <Link href="/recuperar" className="font-bold text-brand-700 underline">Pide uno nuevo</Link> a la administración.
         </p>
       )}
     </AuthShell>

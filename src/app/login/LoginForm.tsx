@@ -24,12 +24,12 @@ export default function LoginForm() {
     setLoading(false);
 
     if (!res || res.error) {
-      if (res?.error === "PENDING") toast("⏳ Tu cuenta aún está en revisión. Te avisaremos por correo cuando esté aprobada.", { duration: 7000 });
+      if (res?.error === "PENDING") toast("⏳ Tu cuenta aún está en revisión. La administración te avisará por WhatsApp cuando esté aprobada.", { duration: 7000 });
       else if (res?.error === "DISABLED") toast.error("Tu cuenta está desactivada. Contacta a la administración.");
       else toast.error("Correo o contraseña incorrectos. Inténtalo de nuevo.");
       return;
     }
-    toast.success("¡Bienvenido!");
+    toast.success("¡Bienvenido!", { duration: 2000 });
     router.replace("/");
     router.refresh();
   }
