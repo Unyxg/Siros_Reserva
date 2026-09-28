@@ -1,0 +1,12 @@
+{
+  "name": "Reserva la Palapa",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:22",
+  "forwardPorts": [3000],
+  "portsAttributes": { "3000": { "label": "App", "onAutoForward": "openBrowser" } },
+  "postCreateCommand": "[ -f .env ] || cp .env.example .env; npm install && npm run setup",
+  "customizations": {
+    "vscode": {
+      "extensions": ["Prisma.prisma", "bradlc.vscode-tailwindcss", "dbaeumer.vscode-eslint"]
+    }
+  }
+}

@@ -1,0 +1,68 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: var(--font-nunito), ui-sans-serif, system-ui, sans-serif;
+}
+
+@theme {
+  --color-brand-50: #ecfdf5;
+  --color-brand-100: #d1fae5;
+  --color-brand-200: #a7f3d0;
+  --color-brand-500: #10b981;
+  --color-brand-600: #059669;
+  --color-brand-700: #047857;
+  --color-brand-800: #065f46;
+  --color-brand-900: #064e3b;
+}
+
+/* Slightly larger base text so it is comfortable for every age group. */
+html {
+  font-size: 17px;
+}
+@media (min-width: 768px) {
+  html {
+    font-size: 18px;
+  }
+}
+
+body {
+  background: #f6f7f4;
+  color: #1c1917;
+}
+
+/* Clear, high-contrast keyboard focus for accessibility */
+:focus-visible {
+  outline: 3px solid var(--color-brand-500);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@utility card {
+  @apply rounded-3xl border border-stone-200/80 bg-white shadow-sm shadow-stone-200/50;
+}
+@utility label {
+  @apply mb-1.5 block text-base font-semibold text-stone-800;
+}
+@utility input {
+  @apply block w-full rounded-2xl border-2 border-stone-200 bg-white px-4 py-3 text-lg text-stone-900 placeholder:text-stone-400 transition focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-100;
+}
+@utility btn {
+  @apply inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl px-5 py-3 text-lg font-bold transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60;
+}
+@utility btn-primary {
+  @apply btn bg-brand-600 text-white shadow-lg shadow-brand-600/25 hover:bg-brand-700;
+}
+@utility btn-secondary {
+  @apply btn border-2 border-stone-200 bg-white text-stone-800 hover:border-stone-300 hover:bg-stone-50;
+}
+@utility btn-danger {
+  @apply btn bg-rose-600 text-white shadow-lg shadow-rose-600/20 hover:bg-rose-700;
+}
