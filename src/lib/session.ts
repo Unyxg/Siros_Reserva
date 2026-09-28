@@ -1,12 +1,27 @@
+import { cache } from "react";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import type { Role } from "@prisma/client";
 import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 
-export async function getCurrentUser() {
+/**
+ * Current user, re-read from the database on every request so role changes
+ * or deactivated accounts take effect immediately (not only at next login).
+ */
+export const getCurrentUser = cache(async () => {
   const session = await getServerSession(authOptions);
-  return session?.user ?? null;
-}
+  if (!session?.user?.id) return null;
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { id: true, name: true, email: true, role: true, status: true, house: true, phone: true },
+  });
+  return user?.status === "ACTIVE" ? user : null;
+});
+
+export type CurrentUser = NonNullable<Awaited<ReturnType<typeof getCurrentUser>>>;
+
+export const isStaff = (role: Role) => role === "APPROVER" || role === "ADMIN";
 
 /** Where each role lands after logging in. */
 export function homeForRole(role: Role) {

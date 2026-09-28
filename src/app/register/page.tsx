@@ -11,7 +11,7 @@ export default async function RegisterPage() {
   if (user) redirect(homeForRole(user.role));
 
   return (
-    <AuthShell title="Crea tu cuenta" subtitle="Solo te tomará un minuto. Así el comité sabrá quién solicita la Palapa.">
+    <AuthShell title="Crea tu cuenta" subtitle="Solo te tomará un minuto. Necesitas el código de invitación de tu residencial.">
       <RegisterForm />
     </AuthShell>
   );

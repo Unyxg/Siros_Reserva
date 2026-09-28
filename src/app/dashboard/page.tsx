@@ -3,6 +3,7 @@ import { CalendarDays, Clock, MessageSquareText, Users } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
 import StatusBadge from "@/components/StatusBadge";
 import AutoRefresh from "@/components/AutoRefresh";
+import AddToCalendar from "@/components/AddToCalendar";
 import ReservationForm, { type BusySlot } from "./_components/ReservationForm";
 import CancelButton from "./_components/CancelButton";
 import { prisma } from "@/lib/prisma";
@@ -17,7 +18,7 @@ export default async function ResidentDashboard() {
   const today = todayISO();
   const maxDate = addDaysISO(today, MAX_DAYS_AHEAD);
 
-  const [busyRaw, mine] = await Promise.all([
+  const [busyRaw, mine, blocked] = await Promise.all([
     // Only times and status are shared with the calendar – never who booked or why.
     prisma.reservation.findMany({
       where: { date: { gte: today, lte: maxDate }, status: { in: ["APPROVED", "PENDING"] } },
@@ -25,6 +26,7 @@ export default async function ResidentDashboard() {
       orderBy: [{ date: "asc" }, { startTime: "asc" }],
     }),
     prisma.reservation.findMany({ where: { userId: user.id }, orderBy: [{ date: "desc" }, { startTime: "desc" }] }),
+    prisma.blockedDate.findMany({ where: { date: { gte: today, lte: maxDate } }, select: { date: true, reason: true }, orderBy: { date: "asc" } }),
   ]);
 
   const upcoming = mine.filter((r) => r.date >= today).reverse();
@@ -39,7 +41,7 @@ export default async function ResidentDashboard() {
         subtitle="Aparta la Palapa en 3 pasos: elige el día, el horario y cuéntanos de tu evento."
       />
 
-      <ReservationForm today={today} maxDate={maxDate} busy={busyRaw as BusySlot[]} />
+      <ReservationForm today={today} maxDate={maxDate} busy={busyRaw as BusySlot[]} blocked={blocked} />
 
       <section className="mt-12">
         <h2 className="text-2xl font-extrabold text-stone-900">Mis solicitudes</h2>
@@ -54,7 +56,7 @@ export default async function ResidentDashboard() {
             {upcoming.length > 0 && (
               <div className="mt-5 grid gap-4 md:grid-cols-2">
                 {upcoming.map((r) => (
-                  <ReservationCard key={r.id} r={r} canCancel={r.status === "PENDING" || r.status === "APPROVED"} />
+                  <ReservationCard key={r.id} r={r} upcoming />
                 ))}
               </div>
             )}
@@ -65,7 +67,7 @@ export default async function ResidentDashboard() {
                 </summary>
                 <div className="mt-4 grid gap-4 opacity-80 md:grid-cols-2">
                   {past.map((r) => (
-                    <ReservationCard key={r.id} r={r} canCancel={false} />
+                    <ReservationCard key={r.id} r={r} upcoming={false} />
                   ))}
                 </div>
               </details>
@@ -79,7 +81,8 @@ export default async function ResidentDashboard() {
 
 type Row = Awaited<ReturnType<typeof prisma.reservation.findMany>>[number];
 
-function ReservationCard({ r, canCancel }: { r: Row; canCancel: boolean }) {
+function ReservationCard({ r, upcoming }: { r: Row; upcoming: boolean }) {
+  const canCancel = upcoming && (r.status === "PENDING" || r.status === "APPROVED");
   const accent =
     r.status === "APPROVED" ? "border-l-emerald-500" : r.status === "PENDING" ? "border-l-amber-400" : r.status === "REJECTED" ? "border-l-rose-500" : "border-l-stone-300";
   return (
@@ -100,9 +103,15 @@ function ReservationCard({ r, canCancel }: { r: Row; canCancel: boolean }) {
           <strong>Comentario del comité:</strong> {r.reviewNote}
         </p>
       )}
-      {canCancel && (
-        <div className="mt-4 flex justify-end">
-          <CancelButton id={r.id} />
+      {r.cancelReason && (
+        <p className="mt-3 rounded-2xl bg-stone-100 px-4 py-2.5 text-base text-stone-800">
+          <strong>Motivo de la cancelación:</strong> {r.cancelReason}
+        </p>
+      )}
+      {(canCancel || (upcoming && r.status === "APPROVED")) && (
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+          {upcoming && r.status === "APPROVED" ? <AddToCalendar r={r} /> : <span />}
+          {canCancel && <CancelButton id={r.id} approved={r.status === "APPROVED"} />}
         </div>
       )}
     </article>

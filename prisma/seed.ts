@@ -1,13 +1,13 @@
-import { PrismaClient, Role, ReservationStatus } from "@prisma/client";
+import { Role, ReservationStatus, UserStatus } from "@prisma/client";
 import bcrypt from "bcryptjs";
-
-const prisma = new PrismaClient();
+import { prisma } from "../src/lib/prisma";
 
 // Demo accounts – change these passwords before going to production!
 const users = [
-  { name: "Ana Residente", email: "residente@palapa.com", house: "Casa 12", role: Role.USER },
-  { name: "Carlos Aprobador", email: "aprobador@palapa.com", house: "Casa 3", role: Role.APPROVER },
-  { name: "María Administradora", email: "admin@palapa.com", house: "Oficina", role: Role.ADMIN },
+  { name: "Ana Residente", email: "residente@palapa.com", house: "Casa 12", phone: "5512345678", role: Role.USER, status: UserStatus.ACTIVE },
+  { name: "Carlos Aprobador", email: "aprobador@palapa.com", house: "Casa 3", phone: "5587654321", role: Role.APPROVER, status: UserStatus.ACTIVE },
+  { name: "María Administradora", email: "admin@palapa.com", house: "Oficina", phone: "5511112222", role: Role.ADMIN, status: UserStatus.ACTIVE },
+  { name: "Luis Nuevo", email: "nuevo@palapa.com", house: "Casa 27", phone: "5533334444", role: Role.USER, status: UserStatus.PENDING },
 ];
 
 function isoDate(offsetDays: number) {
@@ -22,7 +22,7 @@ async function main() {
   for (const u of users) {
     await prisma.user.upsert({
       where: { email: u.email },
-      update: { name: u.name, house: u.house, role: u.role },
+      update: { name: u.name, house: u.house, phone: u.phone, role: u.role, status: u.status, password },
       create: { ...u, password },
     });
   }
@@ -40,8 +40,16 @@ async function main() {
     ],
   });
 
+  await prisma.setting.upsert({ where: { key: "inviteCode" }, update: {}, create: { key: "inviteCode", value: "PALAPA2026" } });
+  await prisma.blockedDate.upsert({
+    where: { date: isoDate(14) },
+    update: {},
+    create: { date: isoDate(14), reason: "Mantenimiento y fumigación" },
+  });
+
+  console.log("🔑 Código de invitación: PALAPA2026");
   console.log("✅ Base de datos lista. Usuarios de prueba (contraseña: Palapa123):");
-  users.forEach((u) => console.log(`   • ${u.role.padEnd(8)} ${u.email}`));
+  users.forEach((u) => console.log(`   • ${u.role.padEnd(8)} ${u.email}${u.status === "PENDING" ? "  (cuenta por aprobar)" : ""}`));
 }
 
 main()

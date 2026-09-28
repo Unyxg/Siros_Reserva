@@ -3,70 +3,104 @@
 Sistema de reservaciones para el área común (Palapa) de un residencial.
 Residential booking app for a community gazebo. **UI is 100% Spanish**; code is in English.
 
-| Rol | Qué puede hacer | Página |
-| --- | --- | --- |
-| **Residente** | Registrarse, ver el calendario de disponibilidad, solicitar y cancelar | `/dashboard` |
-| **Aprobador** | Ver solicitudes pendientes (se actualizan solas), aprobar o rechazar con motivo | `/dashboard/aprobador` |
-| **Administrador** | Panel de solo lectura con métricas, próximos eventos, filtros y búsqueda | `/dashboard/admin` |
+| Rol | Qué puede hacer |
+| --- | --- |
+| **Residente** | Registrarse con código de invitación, ver el calendario, solicitar, cancelar (libera el horario), agregar a su calendario |
+| **Aprobador** | Aprobar / rechazar, cancelar reservaciones aprobadas, avisar por WhatsApp |
+| **Administrador** | Todo lo del aprobador + aprobar cuentas nuevas, asignar roles, cambiar el código de invitación, bloquear días, panel con métricas y descarga en Excel |
 
-> Every role can also make its own reservation from `/dashboard`.
+Everyone can also book the Palapa for themselves from **Reservar**.
+
+## Features
+- **Invite code + account approval**: new sign-ups need the neighborhood code, then an admin approves them (email to admins and to the neighbor).
+- **Availability calendar**: red = booked, yellow = under review, striped grey = closed day (with the reason shown).
+- **Emails via Resend**: new request, approved (with Google Calendar button + `.ics` attachment), rejected, cancelled, account approved, password reset.
+- **WhatsApp (free)**: green buttons open WhatsApp with a pre-written message to the neighbor (`wa.me` links, no API cost).
+- **Add to calendar**: Google Calendar link and `.ics` download (iPhone / Outlook) on approved bookings.
+- **Forgot password**: one-hour, single-use email link (only a hash is stored).
+- **Blocked days**: the admin closes dates; nobody can request or approve them.
+- **Excel export** (admin only): reservations, residents and closed days in one `.xlsx`.
+- **Installable app (PWA)**: “Instalar” prompt on Android/desktop, instructions on iPhone, offline page.
+- Role changes and deactivated accounts take effect immediately (checked on every request).
 
 ## Stack
-Next.js 16 (App Router, Server Actions) · Tailwind CSS v4 · Prisma 6 + SQLite · NextAuth v4 (Credentials) · lucide-react · react-hot-toast · zod
+Next.js 16 (App Router, Server Actions) · Tailwind CSS v4 · Prisma 6 + libSQL adapter (SQLite locally, **Turso** in production) · NextAuth v4 · **Resend** · ExcelJS · lucide-react · react-hot-toast · zod
 
-## Quick start (Codespaces or local)
+## Local development (Codespaces or your computer)
 
 ```bash
-cp .env.example .env        # then set NEXTAUTH_SECRET (openssl rand -base64 32)
-npm install                 # also runs `prisma generate`
-npm run db:migrate          # creates prisma/dev.db and seeds it
-npm run dev                 # http://localhost:3000
+cp .env.example .env     # set NEXTAUTH_SECRET; leave TURSO_* empty
+npm install
+npm run db:migrate       # creates prisma/dev.db and seeds demo data
+npm run dev              # http://localhost:3000
 ```
+In **GitHub Codespaces** the `.devcontainer` does all of this automatically.
+Without `RESEND_API_KEY`, emails are printed in the terminal, including their links (e.g. the password-reset link).
 
-In **GitHub Codespaces**, the included `.devcontainer` runs all of this for you. Then just `npm run dev`.
-Set `NEXTAUTH_URL` to the forwarded URL of port 3000 if the logout or login redirects misbehave.
-
-### Demo accounts (password `Palapa123`)
-
+### Demo accounts (password `Palapa123`, invite code `PALAPA2026`)
 | Rol | Correo |
 | --- | --- |
 | Residente | `residente@palapa.com` |
 | Aprobador | `aprobador@palapa.com` |
 | Administrador | `admin@palapa.com` |
+| Cuenta por aprobar | `nuevo@palapa.com` |
 
-To make an existing user an approver or admin, run `npm run db:studio` and change their `role`.
+## Deploying: Vercel + Turso + Resend
 
-### Useful scripts
+1. **Turso** (database, free tier)
+   ```bash
+   # install the CLI: https://docs.turso.tech/cli/installation
+   turso auth signup
+   turso db create palapa --location dfw      # a US-south location, close to Mexico
+   turso db show palapa --url                 # -> TURSO_DATABASE_URL
+   turso db tokens create palapa              # -> TURSO_AUTH_TOKEN
+   ```
+   Create the tables and your admin account (run from this repo):
+   ```bash
+   TURSO_DATABASE_URL=libsql://… TURSO_AUTH_TOKEN=… npm run turso:migrate
+   TURSO_DATABASE_URL=libsql://… TURSO_AUTH_TOKEN=… npm run create-admin -- tu@correo.com "Tu Nombre" "UnaContraseñaSegura"
+   ```
+   Run `turso:migrate` again whenever a new folder appears in `prisma/migrations`.
+
+2. **Resend** (email, 3,000/month free)
+   - Create an account at resend.com → *Domains* → add your domain and the DNS records it shows.
+   - Create an API key → `RESEND_API_KEY`. Set `EMAIL_FROM`, e.g. `Reserva la Palapa <avisos@tu-dominio.com>`.
+   - Without a verified domain, Resend only delivers to your own email (fine for testing).
+
+3. **Vercel** (hosting, free Hobby plan)
+   - *Add New → Project* → import this GitHub repo (framework: Next.js, defaults are fine).
+   - Environment variables: `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL` (your final URL), `RESEND_API_KEY`, `EMAIL_FROM`, `DATABASE_URL=file:./dev.db` (only needed by `prisma generate`).
+   - Deploy, log in with the admin you created, go to **Vecinos**, change the invite code and share it with the green *Compartir invitación* button.
+
+## Scripts
 | Script | Description |
 | --- | --- |
-| `npm run db:migrate` | Apply schema changes (`prisma migrate dev`) |
-| `npm run db:seed` | Re-create demo users and sample reservations |
-| `npm run db:reset` | Wipe the DB, re-migrate and re-seed |
-| `npm run db:studio` | Visual DB editor |
+| `npm run dev` / `build` / `start` | Next.js |
+| `npm run db:migrate` | Create a migration from `schema.prisma` changes (local) |
+| `npm run db:seed` | Re-create demo users and sample data (local) |
+| `npm run db:studio` | Visual editor for the local DB |
+| `npm run turso:migrate` | Apply pending migrations to Turso |
+| `npm run create-admin -- email "Name" "password"` | Create/promote an admin (local or Turso) |
 
-## Business rules (edit in `src/lib/constants.ts`)
-- Hours: 08:00 – 22:00 in 30-minute steps. Timezone `America/Mexico_City`.
-- Bookings allowed up to 90 days ahead; no past dates; max 60 guests.
-- A time slot that overlaps an **approved** booking cannot be requested or approved.
-- Approvers see a warning when two pending requests collide.
-- A rejection **requires** a reason, and the resident sees it.
-- Residents can cancel their own pending/approved future bookings.
+## Business rules (`src/lib/constants.ts`)
+- Hours 08:00 – 22:00 in 30-minute steps, timezone `America/Mexico_City`.
+- Up to 90 days ahead, no past dates, max 60 guests.
+- No overlaps with approved bookings or closed days, both when requesting and approving.
+- Rejections and staff cancellations require a reason, which the neighbor sees.
 
 ## Project structure
 ```
-prisma/            schema.prisma, migrations, seed.ts
-src/app/actions/   Server Actions (register, create/cancel/review reservation)
-src/app/login      /login           src/app/register  /register
-src/app/dashboard  layout (auth guard + nav), resident page
-  aprobador/       approver dashboard      admin/  admin analytics
-src/components/    AppNav, StatusBadge, AuthShell, AutoRefresh, …
-src/lib/           prisma, auth (NextAuth options), session guards, formatting
+prisma/                schema, migrations, seed
+scripts/               turso-migrate.ts, create-admin.ts
+src/app/actions/       Server Actions: auth.ts, reservations.ts, admin.ts
+src/app/api/           NextAuth, .ics download, Excel export
+src/app/dashboard/     resident page · aprobador/ · admin/ (panel, usuarios/, fechas/)
+src/app/login|register|recuperar|restablecer
+src/lib/               prisma, auth, session guards, email (Resend), notify, whatsapp, calendar, format
+public/                icons, manifest assets, sw.js, offline.html, images/palapa.svg
 ```
 
-## Hero image
-The login page shows `public/images/palapa.jpg` if it exists (e.g. an image generated with Picsart) and a green gradient otherwise.
-
 ![Login](docs/screenshots/01-login.png)
-![Residente](docs/screenshots/02-residente-form.png)
+![Residente](docs/screenshots/03-residente-lista.png)
 ![Aprobador](docs/screenshots/04-aprobador.png)
-![Admin](docs/screenshots/06-admin.png)
+![Vecinos](docs/screenshots/09-admin-vecinos.png)

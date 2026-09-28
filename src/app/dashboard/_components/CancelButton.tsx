@@ -5,7 +5,7 @@ import toast from "react-hot-toast";
 import { Loader2, X } from "lucide-react";
 import { cancelReservation } from "@/app/actions/reservations";
 
-export default function CancelButton({ id }: { id: string }) {
+export default function CancelButton({ id, approved }: { id: string; approved?: boolean }) {
   const [confirming, setConfirming] = useState(false);
   const [pending, startTransition] = useTransition();
 
@@ -19,7 +19,7 @@ export default function CancelButton({ id }: { id: string }) {
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="text-base font-semibold text-stone-700">¿Seguro?</span>
+      <span className="text-base font-semibold text-stone-700">{approved ? "¿Liberar este horario?" : "¿Seguro?"}</span>
       <button
         disabled={pending}
         onClick={() =>

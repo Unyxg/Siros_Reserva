@@ -1,5 +1,5 @@
 // Prisma schema for the Palapa reservation system.
-// SQLite keeps the database self-contained (a single file in /prisma).
+// Locally this is a SQLite file (prisma/dev.db); in production the same schema runs on Turso (libSQL).
 
 generator client {
   provider = "prisma-client-js"
@@ -14,6 +14,12 @@ enum Role {
   USER
   APPROVER
   ADMIN
+}
+
+enum UserStatus {
+  PENDING // registered, waiting for an admin to approve the account
+  ACTIVE
+  DISABLED
 }
 
 enum ReservationStatus {
@@ -31,11 +37,13 @@ model User {
   // House / unit number so approvers know which neighbor is asking
   house     String?
   phone     String?
-  role      Role     @default(USER)
-  createdAt DateTime @default(now())
+  role      Role       @default(USER)
+  status    UserStatus @default(PENDING)
+  createdAt DateTime   @default(now())
 
-  reservations Reservation[] @relation("ReservationOwner")
-  reviewed     Reservation[] @relation("ReservationReviewer")
+  reservations Reservation[]        @relation("ReservationOwner")
+  reviewed     Reservation[]        @relation("ReservationReviewer")
+  resetTokens  PasswordResetToken[]
 }
 
 model Reservation {
@@ -56,10 +64,39 @@ model Reservation {
   reviewedBy   User?     @relation("ReservationReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
   reviewedAt   DateTime?
 
+  // Filled in when the resident or staff cancels, freeing the slot
+  cancelReason String?
+  cancelledAt  DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([date])
   @@index([status])
   @@index([userId])
+}
+
+/// Days the admin closes the Palapa (maintenance, holidays…).
+model BlockedDate {
+  id        String   @id @default(cuid())
+  date      String   @unique // "YYYY-MM-DD"
+  reason    String
+  createdAt DateTime @default(now())
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  // Only a SHA-256 hash of the token is stored; the raw token lives in the email link
+  tokenHash String    @unique
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+}
+
+/// Simple key/value settings editable by the admin (e.g. the invite code).
+model Setting {
+  key   String @id
+  value String
 }

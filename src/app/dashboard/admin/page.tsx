@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { Prisma, ReservationStatus } from "@prisma/client";
-import { CalendarCheck, CheckCircle2, Clock, Search, Users, XCircle } from "lucide-react";
+import { CalendarCheck, CheckCircle2, Clock, FileSpreadsheet, Search, Users, XCircle } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
 import StatusBadge from "@/components/StatusBadge";
 import AutoRefresh from "@/components/AutoRefresh";
@@ -35,7 +35,7 @@ export default async function AdminDashboard({ searchParams }: PageProps<"/dashb
 
   const [grouped, userCount, rows, upcoming] = await Promise.all([
     prisma.reservation.groupBy({ by: ["status"], _count: { _all: true } }),
-    prisma.user.count(),
+    prisma.user.count({ where: { status: "ACTIVE" } }),
     prisma.reservation.findMany({
       where,
       include: { user: { select: { name: true, house: true } }, reviewedBy: { select: { name: true } } },
@@ -80,7 +80,15 @@ export default async function AdminDashboard({ searchParams }: PageProps<"/dashb
   return (
     <>
       <AutoRefresh seconds={30} />
-      <PageHeader title="Panel general" subtitle="Toda la actividad de la Palapa en un solo lugar (solo lectura)." />
+      <PageHeader
+        title="Panel general"
+        subtitle="Toda la actividad de la Palapa en un solo lugar."
+        action={
+          <a href="/api/admin/exportar" className="btn-secondary">
+            <FileSpreadsheet className="h-6 w-6 text-emerald-600" aria-hidden /> Descargar Excel
+          </a>
+        }
+      />
 
       {/* KPI cards */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">

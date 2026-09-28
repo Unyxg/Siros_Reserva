@@ -24,6 +24,10 @@ export const authOptions: NextAuthOptions = {
         const valid = await bcrypt.compare(password, user.password);
         if (!valid) return null;
 
+        // The message is shown to the user by the login form
+        if (user.status === "PENDING") throw new Error("PENDING");
+        if (user.status === "DISABLED") throw new Error("DISABLED");
+
         return { id: user.id, name: user.name, email: user.email, role: user.role };
       },
     }),

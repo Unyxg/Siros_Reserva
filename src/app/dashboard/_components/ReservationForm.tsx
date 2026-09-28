@@ -2,12 +2,13 @@
 
 import { useMemo, useState, useTransition } from "react";
 import toast from "react-hot-toast";
-import { CalendarCheck, ChevronLeft, ChevronRight, Clock, Loader2, Send, Users } from "lucide-react";
+import { CalendarCheck, CalendarX2, ChevronLeft, ChevronRight, Clock, Loader2, Send, Users } from "lucide-react";
 import { createReservation } from "@/app/actions/reservations";
 import { MAX_GUESTS, TIME_OPTIONS } from "@/lib/constants";
 import { formatLongDate, formatTime, timesOverlap } from "@/lib/format";
 
 export type BusySlot = { date: string; startTime: string; endTime: string; status: "APPROVED" | "PENDING" };
+export type Blocked = { date: string; reason: string };
 
 const WEEKDAYS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 const MONTHS = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
@@ -15,7 +16,7 @@ const MONTHS = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", 
 const pad = (n: number) => String(n).padStart(2, "0");
 const iso = (y: number, m: number, d: number) => `${y}-${pad(m + 1)}-${pad(d)}`;
 
-export default function ReservationForm({ today, maxDate, busy }: { today: string; maxDate: string; busy: BusySlot[] }) {
+export default function ReservationForm({ today, maxDate, busy, blocked }: { today: string; maxDate: string; busy: BusySlot[]; blocked: Blocked[] }) {
   const [ty, tm] = today.split("-").map(Number);
   const [view, setView] = useState({ year: ty, month: tm - 1 });
   const [date, setDate] = useState<string>("");
@@ -30,6 +31,8 @@ export default function ReservationForm({ today, maxDate, busy }: { today: strin
     for (const b of busy) map.set(b.date, [...(map.get(b.date) ?? []), b]);
     return map;
   }, [busy]);
+
+  const blockedByDate = useMemo(() => new Map(blocked.map((b) => [b.date, b.reason])), [blocked]);
 
   const dayBusy = (date && busyByDate.get(date)) || [];
   const approvedThatDay = dayBusy.filter((b) => b.status === "APPROVED");
@@ -115,7 +118,8 @@ export default function ReservationForm({ today, maxDate, busy }: { today: strin
           {cells.map((d, i) => {
             if (d === null) return <div key={`e${i}`} />;
             const key = iso(view.year, view.month, d);
-            const disabled = key < today || key > maxDate;
+            const closed = blockedByDate.get(key);
+            const disabled = key < today || key > maxDate || !!closed;
             const slots = busyByDate.get(key) ?? [];
             const hasApproved = slots.some((s) => s.status === "APPROVED");
             const hasPending = slots.some((s) => s.status === "PENDING");
@@ -127,11 +131,14 @@ export default function ReservationForm({ today, maxDate, busy }: { today: strin
                 disabled={disabled}
                 onClick={() => pickDate(key)}
                 aria-pressed={selected}
-                aria-label={`${formatLongDate(key)}${hasApproved ? ", tiene reservaciones" : ", libre"}`}
+                title={closed ? `Cerrado: ${closed}` : undefined}
+                aria-label={`${formatLongDate(key)}${closed ? `, cerrado: ${closed}` : hasApproved ? ", tiene reservaciones" : ", libre"}`}
                 className={`relative flex aspect-square flex-col items-center justify-center rounded-2xl text-lg font-bold transition sm:text-xl ${
                   selected
                     ? "bg-brand-600 text-white shadow-lg shadow-brand-600/30"
-                    : disabled
+                    : closed && key >= today
+                      ? "cursor-not-allowed bg-stone-200/70 text-stone-400 line-through [background-image:repeating-linear-gradient(135deg,transparent_0_6px,rgba(0,0,0,0.05)_6px_12px)]"
+                      : disabled
                       ? "cursor-not-allowed text-stone-300"
                       : hasApproved
                         ? "bg-rose-50 text-rose-900 hover:bg-rose-100"
@@ -154,7 +161,21 @@ export default function ReservationForm({ today, maxDate, busy }: { today: strin
           <li className="flex items-center gap-2"><span className="h-3 w-3 rounded-full ring-2 ring-brand-500" /> Hoy</li>
           <li className="flex items-center gap-2"><span className="h-3 w-3 rounded-full bg-rose-500" /> Ya tiene horario apartado</li>
           <li className="flex items-center gap-2"><span className="h-3 w-3 rounded-full bg-amber-400" /> Solicitud en revisión</li>
+          <li className="flex items-center gap-2"><span className="h-3 w-3 rounded bg-stone-300" /> Cerrado</li>
         </ul>
+
+        {blocked.some((b) => b.date.slice(0, 7) === viewKey) && (
+          <ul className="mt-4 space-y-1.5 rounded-2xl bg-stone-100 p-4 text-base text-stone-700">
+            {blocked
+              .filter((b) => b.date.slice(0, 7) === viewKey)
+              .map((b) => (
+                <li key={b.date} className="flex items-start gap-2">
+                  <CalendarX2 className="mt-0.5 h-5 w-5 shrink-0 text-stone-500" aria-hidden />
+                  <span><strong>{formatLongDate(b.date)}:</strong> cerrado – {b.reason}</span>
+                </li>
+              ))}
+          </ul>
+        )}
       </section>
 
       {/* STEPS 2 & 3 */}

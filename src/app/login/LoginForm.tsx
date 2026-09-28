@@ -24,7 +24,9 @@ export default function LoginForm() {
     setLoading(false);
 
     if (!res || res.error) {
-      toast.error("Correo o contraseña incorrectos. Inténtalo de nuevo.");
+      if (res?.error === "PENDING") toast("⏳ Tu cuenta aún está en revisión. Te avisaremos por correo cuando esté aprobada.", { duration: 7000 });
+      else if (res?.error === "DISABLED") toast.error("Tu cuenta está desactivada. Contacta a la administración.");
+      else toast.error("Correo o contraseña incorrectos. Inténtalo de nuevo.");
       return;
     }
     toast.success("¡Bienvenido!");
@@ -39,7 +41,12 @@ export default function LoginForm() {
         <input id="email" name="email" type="email" autoComplete="email" required className="input" placeholder="tucorreo@ejemplo.com" />
       </div>
       <div>
-        <label htmlFor="password" className="label">Contraseña</label>
+        <div className="flex items-baseline justify-between">
+          <label htmlFor="password" className="label">Contraseña</label>
+          <Link href="/recuperar" className="text-base font-semibold text-brand-700 underline-offset-4 hover:underline">
+            ¿La olvidaste?
+          </Link>
+        </div>
         <PasswordInput id="password" name="password" autoComplete="current-password" required placeholder="Tu contraseña" />
       </div>
 
