@@ -5,11 +5,16 @@
  */
 import bcrypt from "bcryptjs";
 import { prisma } from "../src/lib/prisma";
+import { passwordProblem } from "../src/lib/password-rules";
 
 async function main() {
   const [email, name, password, phoneArg] = process.argv.slice(2);
   const phone = phoneArg?.replace(/\D/g, "") || undefined;
-  if (!email || !name || !password || password.length < 8) {
+  if (password && passwordProblem(password)) {
+    console.error(passwordProblem(password));
+    process.exit(1);
+  }
+  if (!email || !name || !password) {
     console.error('Uso: npm run create-admin -- correo@ejemplo.com "Nombre" "contraseña (mín. 8)" [WhatsApp a 10 dígitos]');
     process.exit(1);
   }

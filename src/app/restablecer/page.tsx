@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: "Nueva contraseña" };
 export default async function ResetPage({ searchParams }: PageProps<"/restablecer">) {
   const { token } = await searchParams;
   return (
-    <AuthShell title="Crea tu nueva contraseña" subtitle="Elige una contraseña que puedas recordar, de al menos 8 caracteres.">
+    <AuthShell title="Crea tu nueva contraseña" subtitle="Elige una contraseña que puedas recordar: 8 caracteres o más, con mayúscula, minúscula y número.">
       {typeof token === "string" && token ? (
         <ResetForm token={token} />
       ) : (

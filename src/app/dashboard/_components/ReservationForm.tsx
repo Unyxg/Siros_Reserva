@@ -5,7 +5,7 @@ import toast from "react-hot-toast";
 import { CalendarCheck, CalendarX2, ChevronLeft, ChevronRight, Clock, Loader2, Send, Users } from "lucide-react";
 import { createReservation } from "@/app/actions/reservations";
 import { showResult } from "@/components/resultToast";
-import { MAX_GUESTS, TIME_OPTIONS } from "@/lib/constants";
+import { MAX_GUESTS, MAX_HOURS, TIME_OPTIONS } from "@/lib/constants";
 import { formatLongDate, formatTime, timesOverlap } from "@/lib/format";
 
 export type BusySlot = { date: string; startTime: string; endTime: string; status: "APPROVED" | "PENDING" };
@@ -83,7 +83,9 @@ export default function ReservationForm({ today, maxDate, busy, blocked }: { tod
     });
   }
 
-  const endOptions = TIME_OPTIONS.filter((t) => t > startTime);
+  // End times after the start, at most MAX_HOURS later
+  const toMin = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
+  const endOptions = TIME_OPTIONS.filter((t) => t > startTime && toMin(t) - toMin(startTime) <= MAX_HOURS * 60);
 
   return (
     <form onSubmit={onSubmit} className="grid gap-6 lg:grid-cols-5">
@@ -221,13 +223,15 @@ export default function ReservationForm({ today, maxDate, busy, blocked }: { tod
           </div>
         </div>
 
+        <p className="mt-2 text-base text-stone-500">Horario de 8:00 a. m. a 10:00 p. m. · máximo {MAX_HOURS} horas por reservación.</p>
+
         <div className="mt-6">
           <StepTitle n={3} title="Cuéntanos del evento" />
         </div>
         <div className="mt-4 space-y-4">
           <div>
             <label htmlFor="guests" className="label flex items-center gap-2">
-              <Users className="h-5 w-5 text-stone-500" aria-hidden /> ¿Cuántas personas?
+              <Users className="h-5 w-5 text-stone-500" aria-hidden /> ¿Cuántas personas? <span className="font-normal text-stone-500">(máx. {MAX_GUESTS})</span>
             </label>
             <input id="guests" type="number" inputMode="numeric" min={1} max={MAX_GUESTS} required value={guests} onChange={(e) => setGuests(e.target.value)} className="input" placeholder="Ej. 15" />
           </div>

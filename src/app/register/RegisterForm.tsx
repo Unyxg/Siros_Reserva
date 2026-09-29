@@ -6,11 +6,15 @@ import toast from "react-hot-toast";
 import { Hourglass, KeyRound, Loader2, MessageCircle, UserPlus } from "lucide-react";
 import PasswordInput from "@/components/PasswordInput";
 import { registerUser } from "@/app/actions/auth";
+import PasswordChecklist from "@/components/PasswordChecklist";
+import { passwordProblem } from "@/lib/password-rules";
 
 export default function RegisterForm() {
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
   const [adminLink, setAdminLink] = useState<string | null>(null);
+  const [pw, setPw] = useState("");
+  const [pw2, setPw2] = useState("");
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -23,6 +27,11 @@ export default function RegisterForm() {
       password: String(f.get("password") ?? ""),
       inviteCode: String(f.get("inviteCode") ?? ""),
     };
+    const problem = passwordProblem(data.password);
+    if (problem) {
+      toast.error(problem);
+      return;
+    }
     if (data.password !== f.get("confirm")) {
       toast.error("Las contraseñas no coinciden.");
       return;
@@ -86,11 +95,14 @@ export default function RegisterForm() {
       </div>
       <div>
         <label htmlFor="password" className="label">Contraseña</label>
-        <PasswordInput id="password" name="password" autoComplete="new-password" minLength={8} required placeholder="Mínimo 8 caracteres" />
+        <PasswordInput id="password" name="password" autoComplete="new-password" required value={pw} onChange={(e) => setPw(e.target.value)} placeholder="Ej. Palapa2026" aria-describedby="pw-rules" />
       </div>
       <div>
         <label htmlFor="confirm" className="label">Repite la contraseña</label>
-        <PasswordInput id="confirm" name="confirm" autoComplete="new-password" minLength={8} required placeholder="Escríbela otra vez" />
+        <PasswordInput id="confirm" name="confirm" autoComplete="new-password" required value={pw2} onChange={(e) => setPw2(e.target.value)} placeholder="Escríbela otra vez" />
+        <div id="pw-rules">
+          <PasswordChecklist value={pw} confirm={pw2} />
+        </div>
       </div>
 
       <p className="text-base text-stone-600">

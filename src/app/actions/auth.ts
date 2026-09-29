@@ -10,6 +10,7 @@ import { cloudEnabled } from "@/lib/whatsapp-cloud";
 import { createResetToken, resetRecentlyRequested } from "@/lib/password-reset";
 import { deliver } from "@/lib/deliver";
 import { hashToken } from "@/lib/tokens";
+import { passwordProblem } from "@/lib/password-rules";
 
 /** `whatsapp` is an optional wa.me link the UI offers right after the action. */
 export type ActionResult = { ok: true; message: string; whatsapp?: string | null } | { ok: false; message: string };
@@ -25,7 +26,10 @@ const registerSchema = z.object({
   email: z.string().trim().toLowerCase().email("El correo no es válido."),
   house: z.string().trim().min(1, "Indica tu número de casa o departamento."),
   phone: phoneSchema,
-  password: z.string().min(8, "La contraseña debe tener al menos 8 caracteres."),
+  password: z.string().superRefine((p, ctx) => {
+    const problem = passwordProblem(p);
+    if (problem) ctx.addIssue({ code: "custom", message: problem });
+  }),
   inviteCode: z.string().trim().min(1, "Escribe el código de invitación."),
 });
 
@@ -75,7 +79,8 @@ export async function requestPasswordReset(emailInput: string): Promise<ActionRe
 }
 
 export async function resetPassword(token: string, password: string): Promise<ActionResult> {
-  if (password.length < 8) return { ok: false, message: "La contraseña debe tener al menos 8 caracteres." };
+  const problem = passwordProblem(password);
+  if (problem) return { ok: false, message: problem };
 
   const row = await prisma.passwordResetToken.findUnique({ where: { tokenHash: hashToken(token) } });
   if (!row || row.usedAt || row.expiresAt < new Date())

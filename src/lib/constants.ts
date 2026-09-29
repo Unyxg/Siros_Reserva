@@ -6,7 +6,8 @@ export const OPENING_HOUR = 8; // 08:00
 export const CLOSING_HOUR = 22; // 22:00
 export const SLOT_MINUTES = 30;
 export const MAX_DAYS_AHEAD = 90;
-export const MAX_GUESTS = 60;
+export const MAX_GUESTS = 40;
+export const MAX_HOURS = 12; // longest single reservation
 
 export const STATUS_LABEL: Record<ReservationStatus, string> = {
   PENDING: "Pendiente",

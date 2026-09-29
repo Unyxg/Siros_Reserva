@@ -113,7 +113,8 @@ Cost: Meta charges per delivered template message (utility, Mexico ≈ US$0.01 o
 
 ## Business rules (`src/lib/constants.ts`)
 - Hours 08:00 – 22:00 in 30-minute steps, timezone `America/Mexico_City`.
-- Up to 90 days ahead, no past dates, max 60 guests.
+- Up to 90 days ahead, no past dates, max 40 guests, a reservation lasts at most 12 hours.
+- Passwords: 8+ characters with an uppercase letter, a lowercase letter and a number (live checklist on the forms).
 - No overlaps with approved bookings or closed days, both when requesting and approving.
 - Rejections and staff cancellations require a reason, which the neighbor sees.
 

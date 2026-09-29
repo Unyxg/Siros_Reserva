@@ -5,7 +5,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser, isStaff } from "@/lib/session";
 import { addDaysISO, timesOverlap, todayISO } from "@/lib/format";
-import { MAX_DAYS_AHEAD, MAX_GUESTS, TIME_OPTIONS } from "@/lib/constants";
+import { MAX_DAYS_AHEAD, MAX_GUESTS, MAX_HOURS, TIME_OPTIONS } from "@/lib/constants";
 import { getCommitteeWhatsapp } from "@/lib/settings";
 import { newRequestMessage, reservationWhatsappMessage, residentCancelledMessage, whatsappLink } from "@/lib/whatsapp";
 import { notifyCancelledByStaff, notifyNewRequest, notifyReviewed, notifySlotFreed } from "@/lib/notify";
@@ -23,6 +23,8 @@ async function findApprovedConflict(date: string, startTime: string, endTime: st
   return approved.find((r) => timesOverlap(startTime, endTime, r.startTime, r.endTime));
 }
 
+const minutes = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
+
 const createSchema = z
   .object({
     date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Elige una fecha."),
@@ -31,7 +33,8 @@ const createSchema = z
     guests: z.coerce.number().int().min(1, "Indica cuántas personas asistirán.").max(MAX_GUESTS, `El máximo es ${MAX_GUESTS} personas.`),
     reason: z.string().trim().min(3, "Cuéntanos brevemente el motivo del evento.").max(300, "El motivo es demasiado largo."),
   })
-  .refine((d) => d.endTime > d.startTime, { message: "La hora de fin debe ser después de la hora de inicio." });
+  .refine((d) => d.endTime > d.startTime, { message: "La hora de fin debe ser después de la hora de inicio." })
+  .refine((d) => minutes(d.endTime) - minutes(d.startTime) <= MAX_HOURS * 60, { message: `Una reservación puede durar máximo ${MAX_HOURS} horas.` });
 
 export async function createReservation(input: z.input<typeof createSchema>): Promise<ActionResult> {
   const user = await getCurrentUser();
