@@ -27,13 +27,16 @@ async function sendToAll(phones: string[], send: (p: string) => Promise<boolean>
   return results.some(Boolean);
 }
 
+// Committee notices also go to the administration's contact number (the admin account may have no phone saved)
+const committeePhones = async () => staffPhones(["APPROVER", "ADMIN"], [await getContactWhatsapp()]);
+
 export async function notifyNewRequest(r: Reservation, user: Person) {
-  const phones = await staffPhones(["APPROVER", "ADMIN"]);
+  const phones = await committeePhones();
   return sendToAll(phones, (p) => sendTemplate(p, "newRequest", [user.name, user.house ?? "—", date(r), hours(r), r.reason]));
 }
 
 export async function notifySlotFreed(r: Reservation, user: Person) {
-  const phones = await staffPhones(["APPROVER", "ADMIN"]);
+  const phones = await committeePhones();
   return sendToAll(phones, (p) => sendTemplate(p, "slotFreed", [user.name, user.house ?? "—", date(r), hours(r)]));
 }
 

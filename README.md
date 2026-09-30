@@ -77,10 +77,10 @@ Without these settings the app uses free "tap to send" WhatsApp buttons. With th
 
 | Notice | Template | Sent to |
 |---|---|---|
-| New request | `palapa_solicitud_nueva` | all approvers + admins with a phone |
+| New request | `palapa_solicitud_nueva` | all approvers + admins with a phone, plus the administration contact number |
 | Approved / rejected | `palapa_reserva_aprobada` / `palapa_reserva_rechazada` | the neighbor |
 | Cancelled by staff | `palapa_reserva_cancelada` | the neighbor |
-| Neighbor frees an approved slot | `palapa_horario_liberado` | approvers + admins |
+| Neighbor frees an approved slot | `palapa_horario_liberado` | approvers + admins + the contact number |
 | New account | `palapa_cuenta_nueva` | admins + the administration's contact number |
 | Account approved | `palapa_registro_aprobado` | the neighbor |
 | Forgot password (self-service) | `palapa_nueva_contrasena` | the account's phone (button with a 24-h link) |
